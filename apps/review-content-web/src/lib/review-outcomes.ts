@@ -35,7 +35,7 @@ export async function forwardReviewOutcome(
   try {
     response = await fetcher(`${options.baseUrl.replace(/\/$/, '')}/${path}`, {
       body: JSON.stringify({
-        rag: input.outcome,
+        rag: input.outcome ?? '',
         reviewer: input.reviewer,
         sheet: input.target.sheet,
         uuid: input.target.uuid,
@@ -55,5 +55,13 @@ export async function forwardReviewOutcome(
       status: response.status,
     };
   }
-  return { message: 'Submitted to Google Sheets.', status: response.status };
+  return {
+    message:
+      input.outcome === null
+        ? 'Review outcome reset in Google Sheets.'
+        : input.outcome === 'PRG'
+          ? 'Approved and submitted to Google Sheets.'
+          : `${input.outcome} submitted to Google Sheets.`,
+    status: response.status,
+  };
 }

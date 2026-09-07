@@ -1,8 +1,13 @@
-export const REVIEW_PREFERENCES_KEY = 'rtq.review-content.preferences.v2';
+export const REVIEW_PREFERENCES_KEY = 'rtq.review-content.preferences.v3';
 export const LEGACY_REVIEW_PREFERENCES_KEY =
+  'rtq.review-content.preferences.v2';
+export const INITIAL_REVIEW_PREFERENCES_KEY =
   'rtq.review-content.preferences.v1';
 
+export type ReviewControlMode = 'advanced' | 'simple';
+
 export type ReviewPreferences = Readonly<{
+  reviewControlMode: ReviewControlMode;
   showAnswerReview: boolean;
   showQuestionReview: boolean;
   showRaw: boolean;
@@ -11,6 +16,7 @@ export type ReviewPreferences = Readonly<{
 }>;
 
 export const DEFAULT_REVIEW_PREFERENCES: ReviewPreferences = {
+  reviewControlMode: 'simple',
   showAnswerReview: true,
   showQuestionReview: true,
   showRaw: false,
@@ -37,15 +43,19 @@ function parsePreferenceRecord(
 export function parseReviewPreferences(
   value: string | null,
   legacyValue: string | null = null,
+  initialValue: string | null = null,
 ): ReviewPreferences {
   const parsed = parsePreferenceRecord(value);
   const legacy = parsePreferenceRecord(legacyValue);
+  const initial = parsePreferenceRecord(initialValue);
   const oldReviewPreference =
     typeof parsed?.showReview === 'boolean'
       ? parsed.showReview
       : typeof legacy?.showReview === 'boolean'
         ? legacy.showReview
-        : undefined;
+        : typeof initial?.showReview === 'boolean'
+          ? initial.showReview
+          : undefined;
 
   function preference(
     key: keyof ReviewPreferences,
@@ -53,12 +63,23 @@ export function parseReviewPreferences(
   ): boolean {
     const currentPreference = parsed?.[key];
     const legacyPreference = legacy?.[key];
+    const initialPreference = initial?.[key];
     if (typeof currentPreference === 'boolean') return currentPreference;
     if (typeof legacyPreference === 'boolean') return legacyPreference;
+    if (typeof initialPreference === 'boolean') return initialPreference;
     return fallback;
   }
 
+  const requestedControlMode =
+    parsed?.reviewControlMode ??
+    legacy?.reviewControlMode ??
+    initial?.reviewControlMode;
+
   return {
+    reviewControlMode:
+      requestedControlMode === 'advanced' || requestedControlMode === 'simple'
+        ? requestedControlMode
+        : DEFAULT_REVIEW_PREFERENCES.reviewControlMode,
     showAnswerReview: preference(
       'showAnswerReview',
       oldReviewPreference ?? DEFAULT_REVIEW_PREFERENCES.showAnswerReview,

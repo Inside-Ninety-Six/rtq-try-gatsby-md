@@ -20,6 +20,7 @@ import {
   serializeReviewFilterSearchParams,
   type DimensionalTagAxis,
   type ReviewFilterSelection,
+  type ReviewPaperNode,
 } from '@rtq/review-paper-model/client';
 
 import type {
@@ -30,6 +31,7 @@ import type {
 } from '@/lib/display-model';
 import {
   DEFAULT_REVIEW_PREFERENCES,
+  INITIAL_REVIEW_PREFERENCES_KEY,
   LEGACY_REVIEW_PREFERENCES_KEY,
   REVIEW_PREFERENCES_KEY,
   adjacentQuestionId,
@@ -37,6 +39,7 @@ import {
   reviewStateLabel,
   visibleReviewSides,
   type ReviewPreferences,
+  type ReviewControlMode,
 } from '@/lib/review-view-model';
 import {
   REVIEW_OUTCOMES,
@@ -47,7 +50,7 @@ import {
   runUniqueReviewRequest,
   type LocalReviewComment,
   type ReviewCommentLoad,
-  type ReviewOutcome,
+  type ReviewOutcomeSelection,
   type ReviewSide,
   type ReviewTargetDescriptor,
 } from '@/lib/review-types';
@@ -139,14 +142,14 @@ type ReviewRuntimeState = Readonly<{
   ) => Promise<LocalReviewComment>;
   commentError?: string;
   comments: readonly LocalReviewComment[];
-  outcomeOverrides: Readonly<Record<string, ReviewOutcome>>;
+  outcomeOverrides: Readonly<Record<string, ReviewOutcomeSelection>>;
   pendingKeys: ReadonlySet<string>;
   reviewer: string;
   showPreviousFeedback: boolean;
   source: Readonly<{ collectionId: string; relativePath: string }>;
   submitOutcome: (
     target: ReviewTargetDescriptor,
-    outcome: ReviewOutcome,
+    outcome: ReviewOutcomeSelection,
   ) => Promise<string>;
 }>;
 
@@ -208,12 +211,14 @@ function targetUnavailableReason(
 }
 
 function ReviewScope({
+  controlMode,
   node,
   outcomesEnabled,
   runtime,
   side,
   topLevelQuestion,
 }: {
+  controlMode: ReviewControlMode;
   node: DisplayPaperNode;
   outcomesEnabled: boolean;
   runtime: ReviewRuntimeState;
@@ -237,8 +242,9 @@ function ReviewScope({
     : { current: [], history: [] };
   const hasFeedback =
     commentGroups.current.length > 0 || commentGroups.history.length > 0;
-  const displayedOutcome =
-    runtime.outcomeOverrides[key] ?? node.review[side].reviewOutcome;
+  const displayedOutcome = Object.hasOwn(runtime.outcomeOverrides, key)
+    ? runtime.outcomeOverrides[key]
+    : node.review[side].reviewOutcome;
   const outcomeDisabledReason = !target
     ? targetUnavailableReason(node, topLevelQuestion, side)
     : !target.sheet
@@ -248,7 +254,7 @@ function ReviewScope({
     ? targetUnavailableReason(node, topLevelQuestion, side)
     : runtime.commentError;
 
-  async function submitOutcome(outcome: ReviewOutcome) {
+  async function submitOutcome(outcome: ReviewOutcomeSelection) {
     if (!target || outcomeDisabledReason || outcomePending) return;
     setStatus({ kind: 'idle', message: '' });
     try {
@@ -292,7 +298,11 @@ function ReviewScope({
   }
 
   return (
-    <section className={`review-scope review-scope--${side}`}>
+    <section
+      className={`review-scope review-scope--${side}${
+        status.kind === 'success' ? ' review-scope--success' : ''
+      }`}
+    >
       <header>
         <div>
           <span>{outcomesEnabled ? `${side} review` : `${side} feedback`}</span>
@@ -317,10 +327,12 @@ function ReviewScope({
                     : 'Not reviewed'}
                 </dd>
               </div>
-              <div>
-                <dt>Sheet</dt>
-                <dd>{target?.sheet ?? 'Unavailable'}</dd>
-              </div>
+              {controlMode === 'advanced' ? (
+                <div>
+                  <dt>Sheet</dt>
+                  <dd>{target?.sheet ?? 'Unavailable'}</dd>
+                </div>
+              ) : null}
             </>
           ) : null}
         </dl>
@@ -328,25 +340,53 @@ function ReviewScope({
 
       {outcomesEnabled ? (
         <>
-          <div
-            className="outcome-actions"
-            aria-label={`${side} review outcomes`}
-          >
-            {REVIEW_OUTCOMES.map((outcome) => (
+          {controlMode === 'simple' ? (
+            <div
+              aria-label={`${side} simple review outcomes`}
+              className="simple-outcome-actions"
+            >
               <button
-                aria-pressed={
-                  reviewStateLabel(displayedOutcome ?? '') === outcome
-                }
+                aria-pressed={displayedOutcome === 'PRG'}
+                className="simple-outcome-approve"
                 disabled={Boolean(outcomeDisabledReason) || outcomePending}
-                key={outcome}
-                onClick={() => void submitOutcome(outcome)}
+                onClick={() => void submitOutcome('PRG')}
                 title={outcomeDisabledReason}
                 type="button"
               >
-                {outcome}
+                Approved
               </button>
-            ))}
-          </div>
+              <button
+                aria-pressed={!displayedOutcome}
+                className="simple-outcome-reset"
+                disabled={Boolean(outcomeDisabledReason) || outcomePending}
+                onClick={() => void submitOutcome(null)}
+                title={outcomeDisabledReason}
+                type="button"
+              >
+                Reset
+              </button>
+            </div>
+          ) : (
+            <div
+              className="outcome-actions"
+              aria-label={`${side} review outcomes`}
+            >
+              {REVIEW_OUTCOMES.map((outcome) => (
+                <button
+                  aria-pressed={
+                    reviewStateLabel(displayedOutcome ?? '') === outcome
+                  }
+                  disabled={Boolean(outcomeDisabledReason) || outcomePending}
+                  key={outcome}
+                  onClick={() => void submitOutcome(outcome)}
+                  title={outcomeDisabledReason}
+                  type="button"
+                >
+                  {outcome}
+                </button>
+              ))}
+            </div>
+          )}
           {outcomeDisabledReason ? (
             <p className="review-unavailable">{outcomeDisabledReason}</p>
           ) : null}
@@ -407,14 +447,6 @@ function ReviewScope({
           </span>
         </div>
         <CommentList comments={commentGroups.current} current />
-        {!runtime.showPreviousFeedback && commentGroups.history.length > 0 ? (
-          <p className="comment-history-note">
-            {commentGroups.history.length} previous{' '}
-            {commentGroups.history.length === 1 ? 'comment is' : 'comments are'}{' '}
-            hidden. Use Show previous feedback above to read{' '}
-            {commentGroups.history.length === 1 ? 'it' : 'them'}.
-          </p>
-        ) : null}
         {runtime.showPreviousFeedback && commentGroups.history.length > 0 ? (
           <section className="comment-history">
             <div className="comment-history-heading">
@@ -466,6 +498,7 @@ function ReviewPanel({
       <div className="review-scopes" data-visible-sides={visibleSides.length}>
         {visibleSides.map((side) => (
           <ReviewScope
+            controlMode={preferences.reviewControlMode}
             key={side}
             node={node}
             outcomesEnabled={outcomesEnabled}
@@ -948,6 +981,71 @@ function FilterPanel({
   );
 }
 
+function QuestionIndexNode({
+  matchingNodeIds,
+  node,
+}: {
+  matchingNodeIds: ReadonlySet<string>;
+  node: ReviewPaperNode;
+}) {
+  const exactMatch = matchingNodeIds.has(node.id);
+  return (
+    <li
+      className={`question-index-item question-index-item--depth-${node.depth}`}
+    >
+      <a
+        className={exactMatch ? 'question-index-link--match' : undefined}
+        href={`#question-${node.id}`}
+      >
+        <span>{node.label}</span>
+        {!exactMatch ? <small>context</small> : null}
+      </a>
+      {node.children.length > 0 ? (
+        <ol>
+          {node.children.map((child) => (
+            <QuestionIndexNode
+              key={child.id}
+              matchingNodeIds={matchingNodeIds}
+              node={child}
+            />
+          ))}
+        </ol>
+      ) : null}
+    </li>
+  );
+}
+
+function PaperQuestionIndex({
+  matchingNodeIds,
+  sections,
+}: {
+  matchingNodeIds: ReadonlySet<string>;
+  sections: ReturnType<typeof filterReviewPaper>['matchingSections'];
+}) {
+  return (
+    <aside className="question-index" aria-label="Filtered question navigation">
+      <span>Questions</span>
+      {sections.map((section) => (
+        <section className="question-index-section" key={section.id}>
+          <a className="question-index-section-link" href={`#${section.id}`}>
+            <span>{section.label}</span>
+            <strong>{section.questions.length}</strong>
+          </a>
+          <ol>
+            {section.questions.map((question) => (
+              <QuestionIndexNode
+                key={question.id}
+                matchingNodeIds={matchingNodeIds}
+                node={question}
+              />
+            ))}
+          </ol>
+        </section>
+      ))}
+    </aside>
+  );
+}
+
 function QuestionNavigation({
   activeId,
   label,
@@ -1069,7 +1167,7 @@ export function ReviewSurface({
   );
   const [showPreviousFeedback, setShowPreviousFeedback] = useState(false);
   const [outcomeOverrides, setOutcomeOverrides] = useState<
-    Readonly<Record<string, ReviewOutcome>>
+    Readonly<Record<string, ReviewOutcomeSelection>>
   >({});
   const [pendingKeys, setPendingKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -1158,7 +1256,7 @@ export function ReviewSurface({
   }, []);
 
   const submitOutcome = useCallback(
-    (target: ReviewTargetDescriptor, outcome: ReviewOutcome) => {
+    (target: ReviewTargetDescriptor, outcome: ReviewOutcomeSelection) => {
       const key = reviewTargetKey(target);
       return withPending(`${key}:outcome`, async () => {
         const response = await fetch('/api/review/outcome', {
@@ -1248,6 +1346,7 @@ export function ReviewSurface({
         next = parseReviewPreferences(
           stored,
           localStorage.getItem(LEGACY_REVIEW_PREFERENCES_KEY),
+          localStorage.getItem(INITIAL_REVIEW_PREFERENCES_KEY),
         );
         if (!stored) {
           localStorage.setItem(REVIEW_PREFERENCES_KEY, JSON.stringify(next));
@@ -1300,7 +1399,10 @@ export function ReviewSurface({
     }
   }
 
-  function togglePreference(key: keyof ReviewPreferences, value: boolean) {
+  function updatePreference<Key extends keyof ReviewPreferences>(
+    key: Key,
+    value: ReviewPreferences[Key],
+  ) {
     updatePreferences({ ...preferences, [key]: value });
   }
 
@@ -1466,41 +1568,61 @@ export function ReviewSurface({
           <PreferenceToggle
             checked={preferences.showSolutions}
             label="Workings & answers"
-            onChange={(value) => togglePreference('showSolutions', value)}
+            onChange={(value) => updatePreference('showSolutions', value)}
           />
           <PreferenceToggle
             checked={preferences.showTags}
             label="Tags"
-            onChange={(value) => togglePreference('showTags', value)}
+            onChange={(value) => updatePreference('showTags', value)}
           />
           <PreferenceToggle
             checked={preferences.showRaw}
             label="Raw source"
-            onChange={(value) => togglePreference('showRaw', value)}
+            onChange={(value) => updatePreference('showRaw', value)}
           />
           <PreferenceToggle
             checked={preferences.showQuestionReview}
             label="Question review"
-            onChange={(value) => togglePreference('showQuestionReview', value)}
+            onChange={(value) => updatePreference('showQuestionReview', value)}
           />
           <PreferenceToggle
             checked={preferences.showAnswerReview}
             label="Answer review"
-            onChange={(value) => togglePreference('showAnswerReview', value)}
+            onChange={(value) => updatePreference('showAnswerReview', value)}
           />
         </div>
         {visibleReviewSides(preferences).length > 0 ? (
-          <div className="review-toolbar-group review-toolbar-group--feedback">
-            <span className="toolbar-label">Feedback</span>
-            <PreferenceToggle
-              checked={showPreviousFeedback}
-              label="Show previous feedback"
-              onChange={setShowPreviousFeedback}
-            />
-            <span className="feedback-mode-copy">
-              {showPreviousFeedback ? 'All RAG states' : 'Current RAG only'}
-            </span>
-          </div>
+          <>
+            <div className="review-toolbar-group review-toolbar-group--mode">
+              <span className="toolbar-label">Review mode</span>
+              <PreferenceToggle
+                checked={preferences.reviewControlMode === 'simple'}
+                label="Simple review"
+                onChange={(value) =>
+                  updatePreference(
+                    'reviewControlMode',
+                    value ? 'simple' : 'advanced',
+                  )
+                }
+              />
+              <span className="feedback-mode-copy">
+                {preferences.reviewControlMode === 'simple'
+                  ? 'Approved / Reset'
+                  : 'All outcomes'}
+              </span>
+            </div>
+            <div className="review-toolbar-group review-toolbar-group--feedback">
+              <span className="toolbar-label">Feedback</span>
+              <PreferenceToggle
+                checked={showPreviousFeedback}
+                label="Show previous feedback"
+                onChange={setShowPreviousFeedback}
+              />
+              <span className="feedback-mode-copy">
+                {showPreviousFeedback ? 'All RAG states' : 'Current RAG only'}
+              </span>
+            </div>
+          </>
         ) : null}
         <span className="keyboard-note">J / K · next / previous</span>
       </section>
@@ -1526,15 +1648,10 @@ export function ReviewSurface({
         </section>
       ) : (
         <div className="paper-body">
-          <aside className="section-index" aria-label="Paper sections">
-            <span>Sections</span>
-            {result.matchingSections.map((section) => (
-              <a href={`#${section.id}`} key={section.id}>
-                {section.label}
-                <strong>{section.questions.length}</strong>
-              </a>
-            ))}
-          </aside>
+          <PaperQuestionIndex
+            matchingNodeIds={matchingNodeIds}
+            sections={result.matchingSections}
+          />
           <div className="paper-sections">
             {result.matchingSections.map((section) => (
               <section

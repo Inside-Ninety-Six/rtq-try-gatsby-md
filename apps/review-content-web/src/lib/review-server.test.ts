@@ -276,6 +276,15 @@ test('accepts every API outcome and rejects malformed mutation input', () => {
       outcome,
     );
   }
+  assert.equal(
+    parseReviewOutcomeRequest({ outcome: null, reviewer: 'up', target })
+      .outcome,
+    null,
+  );
+  assert.throws(
+    () => parseReviewOutcomeRequest({ outcome: '', reviewer: 'up', target }),
+    ReviewRequestError,
+  );
   assert.throws(
     () =>
       parseReviewOutcomeRequest({
@@ -409,6 +418,10 @@ test('maps question and answer outcomes and forwards only API-required fields', 
     },
     { baseUrl: 'http://review.test', fetcher },
   );
+  const reset = await forwardReviewOutcome(
+    { outcome: null, reviewer: 'ap', target },
+    { baseUrl: 'http://review.test', fetcher },
+  );
   assert.deepEqual(
     requests.slice(0, REVIEW_OUTCOMES.length).map((request) => request.url),
     REVIEW_OUTCOMES.map(() => 'http://review.test/questionrag'),
@@ -424,6 +437,15 @@ test('maps question and answer outcomes and forwards only API-required fields', 
   );
   assert.deepEqual(requests.at(-1), {
     body: {
+      rag: '',
+      reviewer: 'ap',
+      sheet: 'NG3',
+      uuid: 'D8AE66C1-9AB8-4C7F-A023-1C17B53237CF',
+    },
+    url: 'http://review.test/questionrag',
+  });
+  assert.deepEqual(requests.at(-2), {
+    body: {
       rag: 'PRR',
       reviewer: 'wf',
       sheet: 'NG3',
@@ -431,6 +453,7 @@ test('maps question and answer outcomes and forwards only API-required fields', 
     },
     url: 'http://review.test/rag',
   });
+  assert.equal(reset.message, 'Review outcome reset in Google Sheets.');
 });
 
 test('returns safe upstream and connection failures', async () => {

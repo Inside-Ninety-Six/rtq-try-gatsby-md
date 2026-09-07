@@ -34,6 +34,7 @@ export const REVIEW_SHEET_CODES = [
 ] as const;
 
 export type ReviewOutcome = (typeof REVIEW_OUTCOMES)[number];
+export type ReviewOutcomeSelection = ReviewOutcome | null;
 export type ReviewSheetCode = (typeof REVIEW_SHEET_CODES)[number];
 export type ReviewSide = 'answer' | 'question';
 

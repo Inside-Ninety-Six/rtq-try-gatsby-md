@@ -12,8 +12,8 @@ import {
   normalizeSourceRag,
   reviewCommentTargetForNode,
   reviewTargetForNode,
-  type ReviewOutcome,
   type ReviewCommentTargetDescriptor,
+  type ReviewOutcomeSelection,
   type ReviewTargetDescriptor,
 } from './review-types.ts';
 
@@ -33,7 +33,7 @@ export type ReviewMutationRequest = Readonly<{
 }>;
 
 export type ReviewOutcomeRequest = ReviewMutationRequest &
-  Readonly<{ outcome: ReviewOutcome }>;
+  Readonly<{ outcome: ReviewOutcomeSelection }>;
 
 export type ReviewCommentRequest = Readonly<{
   comment: string;
@@ -127,7 +127,7 @@ export function parseReviewOutcomeRequest(
   const body = record(value);
   const mutation = parseReviewMutationRequest(body);
   const outcome = body.outcome;
-  if (!isReviewOutcome(outcome)) {
+  if (outcome !== null && !isReviewOutcome(outcome)) {
     throw new ReviewRequestError('Review outcome is not supported.');
   }
   return { ...mutation, outcome };

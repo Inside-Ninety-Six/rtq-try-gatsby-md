@@ -410,6 +410,56 @@
       "steps": [],
       "notes": "Requested and implemented on 2026-09-07. The user had already committed database/review-content.sqlite in rtq-review; the runtime now resolves that exact file through REVIEW_WORKSPACE_ROOT. No database content was copied or rewritten. The repository check now requires the main file to be tracked and not ignored while requiring only SQLite sidecars to be ignored. Awaiting user review.",
       "children": []
+    },
+    {
+      "id": "T19",
+      "title": "Add simple review controls and outcome reset",
+      "status": "in_review",
+      "description": "Add a persistent simple-versus-advanced review mode, with an intentionally prominent Approved action and a Reset action that clears only the Google Sheets review outcome.",
+      "acceptanceCriteria": [
+        "The sticky paper settings include a simple review switch whose selection survives refreshes in versioned local storage and defaults to the simple mode for new and migrated users.",
+        "Simple mode exposes exactly Approved and Reset as review-outcome actions for each top-level question and answer scope; Approved submits PRG and Reset submits an explicit empty outcome.",
+        "Advanced mode preserves all existing review-outcome actions and remains available without changing the SQLite feedback composer or history.",
+        "The Next.js mutation boundary represents Reset as null, while its Review API adapter sends an empty rag string; arbitrary empty strings remain invalid at the browser-facing boundary.",
+        "Review API permits an empty rag only as a reset after its existing UUID, sheet, and content-state validation, while continuing to allowlist every nonempty outcome.",
+        "Successful approval, reset, and comment submissions produce a bold high-contrast confirmation and a visibly green review scope.",
+        "Automated coverage verifies preference migration, both modes, reset forwarding, and the preserved advanced outcome set; app and API checks pass without contacting Google Sheets."
+      ],
+      "steps": [],
+      "notes": "Requested and implemented on 2026-09-07. Reset clears the Google Sheets outcome cell only; append-only SQLite feedback is deliberately unaffected. Awaiting user review.",
+      "children": []
+    },
+    {
+      "id": "T20",
+      "title": "Add filter-aware hierarchical question navigation",
+      "status": "in_review",
+      "description": "Replace the section-only paper rail with a simple sticky hierarchy that links directly to every visible question, subquestion, and sub-subquestion.",
+      "acceptanceCriteria": [
+        "The left rail shows the section and complete displayed hierarchy of top-level questions, subquestions, and sub-subquestions.",
+        "Every node link targets that exact rendered node and jumps directly to its existing stable question anchor.",
+        "The rail is derived from matchingSections, so dimensional-tag, question-RAG, answer-RAG, and cleared-filter states update the rail and paper from the same result.",
+        "Exact matching nodes are visually distinguished from retained context nodes, without hiding descendants that remain visible in the matching question tree.",
+        "The rail remains available in a compact non-sticky form on narrow screens and avoids animation-specific behavior.",
+        "Automated interface coverage verifies recursion, filtered input, exact-node anchors, and sticky desktop presentation."
+      ],
+      "steps": [],
+      "notes": "Requested and implemented on 2026-09-07 using the existing filtered matchingSections tree, avoiding a second navigation-specific filtering model. Awaiting user review.",
+      "children": []
+    },
+    {
+      "id": "T21",
+      "title": "Remove repeated hidden-feedback prompts",
+      "status": "in_review",
+      "description": "Remove the per-review-scope message that repeats how many previous comments are hidden, while retaining the single global Show previous feedback control and the actual historical feedback view.",
+      "acceptanceCriteria": [
+        "No question, subquestion, sub-subquestion, question-side scope, or answer-side scope renders the repeated hidden-comments instruction.",
+        "The sticky Show previous feedback setting remains the only control for revealing history and continues to show immutable earlier-state comments when enabled.",
+        "Current and previous counts remain available in the feedback heading without an additional instructional paragraph.",
+        "Automated interface coverage guards both removal of the repeated prompt and retention of the global control."
+      ],
+      "steps": [],
+      "notes": "Requested and implemented on 2026-09-07 to reduce repeated noise on mixed-RAG papers. Awaiting user review.",
+      "children": []
     }
   ],
   "validation": [
@@ -420,6 +470,8 @@
     "pnpm --filter rtq-review-content-web test",
     "pnpm --filter rtq-review-content-web test:browser",
     "pnpm --filter rtq-review-content-web build",
+    "pnpm --filter rtq-review-api syntax:check",
+    "pnpm --filter rtq-review-api dependencies:check",
     "Run the renamed review-markdown-web application's existing format, lint, type, test, and build checks through its new package identity",
     "Load the rtq-content tmux review-stack configuration and smoke-check review-content-web on port 3001, review-markdown-web on port 3004, and docs-web on port 3005",
     "Verify the tracked rtq-review database and ignored SQLite sidecars, and ensure functional changes to existing apps and user-owned Gatsby changes remain untouched"
@@ -448,7 +500,8 @@
     "Use review-tag-web as the primary reference for collection browsing, complete-paper parsing, tag inheritance, assets, and paper navigation.",
     "Use review-question-viewer-web as the primary reference for a structured raw/rendered content model and React-based review controls.",
     "Use review-markdown-web as the behavioral reference for bulk review, display preferences, and review action coverage, but do not reuse its generated-Markdown DOM mutation architecture.",
-    "Do not modify review-api for local comment persistence; its existing outcome endpoints remain the Google Sheets boundary, and its legacy comment endpoints remain available only to existing applications."
+    "Do not modify review-api for local comment persistence; its outcome endpoints remain the Google Sheets boundary, and its legacy comment endpoints remain available only to existing applications.",
+    "Represent outcome reset as null inside Review Content Web and translate it to an empty Review API rag value that clears the validated Google Sheets outcome cell; never delete or reset SQLite feedback."
   ],
   "notes": "Code review completed against the maintained Next.js applications, review-api, @rtq/review-repository-paths, the canonical dimensional-tag documentation, the derived-TOML runbook, the paper-review process, and the RAG-state architecture. The two direct-TOML apps currently duplicate substantial parser/asset/tag logic and have drifted in macros, PaperTable handling, placeholder behavior, types, and test coverage. The new app should reconcile a tested superset behind its own read-only package boundary; migration of existing apps can be considered later as a separate risk-controlled task. The review-web to review-markdown-web rename is naming/configuration work only, while the rtq-content tmux update is an explicitly required cross-repository integration change rather than a deferred follow-up."
 }

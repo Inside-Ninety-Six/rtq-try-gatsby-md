@@ -21,9 +21,58 @@ test('display preferences use accessible switches and independent review sides',
   assert.match(component, /role="switch"/);
   assert.match(component, /label="Question review"/);
   assert.match(component, /label="Answer review"/);
+  assert.match(component, /label="Simple review"/);
   assert.match(component, /label="Show previous feedback"/);
   assert.doesNotMatch(component, /label="Review panel"/);
   assert.doesNotMatch(component, /label="Show everything"/);
+});
+
+test('simple review exposes approve and reset while advanced review keeps all outcomes', async () => {
+  const [component, css] = await Promise.all([
+    fs.readFile(componentUrl, 'utf8'),
+    fs.readFile(cssUrl, 'utf8'),
+  ]);
+
+  assert.match(component, /controlMode === 'simple'/);
+  assert.match(component, />\s*Approved\s*<\/button>/);
+  assert.match(component, /submitOutcome\(null\)/);
+  assert.match(component, />\s*Reset\s*<\/button>/);
+  assert.match(component, /REVIEW_OUTCOMES\.map/);
+  assert.match(
+    css,
+    /\.simple-outcome-approve\s*{[^}]*background:\s*var\(--ready\)/s,
+  );
+  assert.match(css, /\.review-scope--success\s*{[^}]*background:\s*#eaf7f0/s);
+  assert.match(
+    css,
+    /\.review-action-status--success\s*{[^}]*font-weight:\s*800/s,
+  );
+});
+
+test('the filtered paper rail links every visible question hierarchy level', async () => {
+  const [component, css] = await Promise.all([
+    fs.readFile(componentUrl, 'utf8'),
+    fs.readFile(cssUrl, 'utf8'),
+  ]);
+
+  assert.match(component, /function QuestionIndexNode/);
+  assert.match(component, /href=\{`#question-\$\{node\.id\}`\}/);
+  assert.match(component, /node\.children\.map/);
+  assert.match(component, /sections=\{result\.matchingSections\}/);
+  assert.match(component, /aria-label="Filtered question navigation"/);
+  assert.match(
+    css,
+    /\.question-index\s*{[^}]*position:\s*sticky;[^}]*top:\s*5rem/s,
+  );
+});
+
+test('previous feedback is controlled globally without repeated hidden-history prompts', async () => {
+  const component = await fs.readFile(componentUrl, 'utf8');
+
+  assert.match(component, /label="Show previous feedback"/);
+  assert.match(component, /runtime\.showPreviousFeedback/);
+  assert.doesNotMatch(component, /previous comments are hidden/i);
+  assert.doesNotMatch(component, /Use Show previous feedback above/i);
 });
 
 test('feedback follows the stable composer in a full-width review flow', async () => {

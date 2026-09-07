@@ -25,7 +25,9 @@ for (const expected of [
   'Review workflow',
   'Node feedback',
   'Add comment',
-  'PRG2',
+  'Simple review',
+  'Approved',
+  'Reset',
   'S1 Q1',
   'S1 Q5a',
   'J / K',
@@ -33,7 +35,10 @@ for (const expected of [
   assert.match(paper.text, new RegExp(expected));
 }
 assert.match(paper.text, /api\/assets\/papers/);
+assert.match(paper.text, /aria-label="Filtered question navigation"/);
+assert.match(paper.text, /href="#question-s0\.q4\.sq0"/);
 assert.doesNotMatch(paper.text, /rtq-question-id is unavailable/);
+assert.doesNotMatch(paper.text, /previous comments are hidden/i);
 assert.match(paper.text, /Own UUID · RAG inherited from S1 Q5/);
 const formulaPosition = paper.text.indexOf('Formulas used');
 const tipPosition = paper.text.indexOf('Keep in mind');
@@ -63,11 +68,11 @@ assert.deepEqual(await unsafeSourceVersion.json(), {
 });
 
 const derivedPaperPath =
-  '/papers/focusTopicToml/topicpapers_math.direction_1.toml';
+  '/papers/focusTopicToml/topicpapers_math.number.order_1.toml';
 const derivedPaper = await read(derivedPaperPath);
 assert.match(
   derivedPaper.text,
-  /bancrofts-school--11-plus--maths--2018--paper-1:1:20/,
+  /sevenoaks-school--11-plus--maths--2018--paper-1:1:6/,
 );
 assert.match(derivedPaper.text, /Add feedback as <!-- -->ap/);
 

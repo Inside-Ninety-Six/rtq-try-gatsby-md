@@ -3,12 +3,27 @@ import test from 'node:test';
 
 import {
   DEFAULT_REVIEW_PREFERENCES,
+  INITIAL_REVIEW_PREFERENCES_KEY,
+  LEGACY_REVIEW_PREFERENCES_KEY,
+  REVIEW_PREFERENCES_KEY,
   adjacentQuestionId,
   paperRoute,
   parseReviewPreferences,
   reviewStateLabel,
   visibleReviewSides,
 } from './review-view-model.ts';
+
+test('display preference storage is versioned for review control mode', () => {
+  assert.equal(REVIEW_PREFERENCES_KEY, 'rtq.review-content.preferences.v3');
+  assert.equal(
+    LEGACY_REVIEW_PREFERENCES_KEY,
+    'rtq.review-content.preferences.v2',
+  );
+  assert.equal(
+    INITIAL_REVIEW_PREFERENCES_KEY,
+    'rtq.review-content.preferences.v1',
+  );
+});
 
 test('preferences survive partial and malformed local values', () => {
   assert.deepEqual(parseReviewPreferences(null), DEFAULT_REVIEW_PREFERENCES);
@@ -42,6 +57,23 @@ test('preferences migrate the former combined review visibility', () => {
       showAnswerReview: true,
       showQuestionReview: false,
     },
+  );
+});
+
+test('review controls default to simple and preserve an advanced selection', () => {
+  assert.equal(parseReviewPreferences(null).reviewControlMode, 'simple');
+  assert.equal(
+    parseReviewPreferences('{"reviewControlMode":"advanced"}')
+      .reviewControlMode,
+    'advanced',
+  );
+  assert.equal(
+    parseReviewPreferences(
+      null,
+      '{"reviewControlMode":"advanced"}',
+      '{"showReview":false}',
+    ).reviewControlMode,
+    'advanced',
   );
 });
 

@@ -9,8 +9,9 @@ The application currently provides collection and file browsing, full nested
 paper presentation, five-axis runtime tag filters, independent question and
 answer content-RAG filters, rendered and raw content views, allowlisted
 canonical paper assets, Google Sheets outcome submission, and local append-only
-review comments. The read-only `allTopicsToml` collection exposes the complete
-one-way projection across every active tag.
+review comments. A filter-aware left rail links directly to every visible
+question, subquestion, and sub-subquestion. The read-only `allTopicsToml`
+collection exposes the complete one-way projection across every active tag.
 
 The paper index also links to a dedicated read-only view of the canonical
 `packages/papers/scripts/papers/lib/model/macros.toml`. That page treats the
@@ -81,6 +82,10 @@ the browser and does not read TOML or contact Google Sheets.
   review sides are independent, so answer-only and question-only layouts are
   supported. Display preferences stay in local browser storage and existing
   combined review-panel preferences migrate to the two switches.
+- Use the persistent **Simple review** switch to choose between the two-action
+  **Approved**/**Reset** controls and the advanced set of review outcomes.
+  Approved submits `PRG`; Reset clears only the Google Sheets outcome cell and
+  never removes SQLite feedback.
 - Rendered workings follow the production RTQ hierarchy: formulas and tips use
   labelled rows, later methods have their own divider, and authored
   `WorkingSection` stages retain their titles and connected side rail. Hidden
@@ -90,7 +95,9 @@ the browser and does not read TOML or contact Google Sheets.
   other than the current state; it is off by default. Each feedback region
   reports current and previous counts even when history is hidden.
 - Use the Previous/Next controls or `J`/`K` (`Alt` + arrow keys also work) to
-  move through matching top-level question trees.
+  move through matching top-level question trees. The left question rail is
+  built from that same filtered result and links to every displayed hierarchy
+  level.
 - All TOML and assets remain read-only. The asset route exposes only question
   images, manual working/answer images, and generated long-division SVGs.
 
@@ -99,7 +106,9 @@ the browser and does not read TOML or contact Google Sheets.
 Question and answer outcomes are submitted to Google Sheets through the local
 `review-api`; the UI labels successful submissions as such and keeps the new
 outcome visible for the current browser session. Canonical TOML remains the
-cross-reload outcome source after the existing Sheets synchronization runs.
+cross-reload outcome source after the existing Sheets synchronization runs. An
+outcome reset is sent as an explicit empty RAG value after the usual Review API
+identity, sheet, and content-state validation.
 
 Comments never call `review-api`. They are appended through Drizzle to
 `<rtq-review>/database/review-content.sqlite`. Every question, subquestion, and

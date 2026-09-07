@@ -490,9 +490,10 @@ helpers do
       return "Invalid Request: Review RAG missing in the request"
     end
 
-    review_rag = review_rag.upcase.to_sym
-    if not settings.review_rags.include?(review_rag)
-      return "Invalid request: Unknown State: #{review_rag}"
+    review_rag = review_rag.to_s.strip
+    if !review_rag.empty? &&
+       !settings.review_rags.include?(review_rag.upcase.to_sym)
+      return "Invalid request: Unknown State: #{review_rag.upcase}"
     end
 
     sheet_name = "Answers - Reviews - #{sheet}"
@@ -604,7 +605,7 @@ helpers do
   def update_rag_values(request_payload, googlesheet_reader, request_type)
     uuid = request_payload[:uuid]
     row_idx = settings.uuids[uuid]
-    state = request_payload[:rag].upcase
+    state = request_payload[:rag].to_s.strip.upcase
     sheet = request_payload[:sheet]
     reviewer = request_payload[:reviewer] || :wf
 
