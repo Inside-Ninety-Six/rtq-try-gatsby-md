@@ -7,7 +7,7 @@
   "goal": [
     "Create a new internal Next.js review application that reads RTQ paper TOML and canonical maths assets directly from the active rtq-content checkout.",
     "Allow reviewers to browse paper collections and refine a selected paper at runtime using the five dimensional tag axes without generating a new Markdown view.",
-    "Retain the established question and answer review-outcome workflow through review-api and Google Sheets, while storing append-only, RAG-state-specific comments locally in SQLite through Drizzle and never editing paper content.",
+    "Retain the established question and answer review-outcome workflow through review-api and Google Sheets, while storing append-only, RAG-state-specific comments in a versioned rtq-review SQLite database through Drizzle and never editing paper content.",
     "Give the maintained reviewers unambiguous names by renaming the existing generated-Markdown application to review-markdown-web and naming the new direct-content application review-content-web."
   ],
   "scope": {
@@ -22,7 +22,7 @@
       "Resolution and display of explicit, inherited, and implicit/default dimensional tags for family, math, frame, marker, and reasoning.",
       "Runtime filtering inside the selected paper using dimensional tag facets and result counts, with filters represented in the URL so a focused review view can be bookmarked or shared.",
       "Question-side and answer-side review outcomes through a same-origin Next.js adapter to the existing review-api service.",
-      "Question-side and answer-side comments persisted through Drizzle in the machine-local SQLite database at <rtq-content>/database/review-content.sqlite, keyed to each question, subquestion, or sub-subquestion by its own UUID (and its own question ID when present), review side, and the corresponding top-level RAG state.",
+      "Question-side and answer-side comments persisted through Drizzle in the versioned SQLite database at <rtq-review>/database/review-content.sqlite, keyed to each question, subquestion, or sub-subquestion by its own UUID (and its own question ID when present), review side, and the corresponding top-level RAG state.",
       "Current-state comment presentation by default plus a Show everything toggle for historical prior-state comments, including author/reviewer identity and server-recorded creation time, with no edit, reset, or delete action.",
       "Source freshness while a paper is open, clear loading/empty/error/stale states, keyboard- and screen-reader-usable controls, and responsive paper navigation.",
       "A tested read-only paper model boundary that can be adopted by existing review applications later without requiring their migration in this iteration.",
@@ -48,8 +48,8 @@
       "All filesystem reads must resolve through @rtq/review-repository-paths and remain contained inside the validated @rtq/papers and @rtq/maths-assets roots.",
       "The browser must never receive arbitrary filesystem paths, private asset metadata, generated LongDivision sources, review API credentials, OAuth tokens, UUID index contents, workbook IDs, or Google Sheets rows.",
       "Review-outcome submissions update Google Sheets only; canonical TOML changes later through the existing synchronization cycle and must not be implied to have changed immediately.",
-      "New comments are local application data: SQLite access remains server-only, all application reads and writes use Drizzle rather than hand-written SQL, and the database resides at database/review-content.sqlite under the configured active rtq-content checkout.",
-      "The rtq-content root .gitignore must ignore /database/review-content.sqlite* so the main database and SQLite journal/WAL/SHM sidecars cannot be committed; the database is intentionally available only on the machine hosting that checkout and is not synchronized between machines.",
+      "SQLite access remains server-only, all application reads and writes use Drizzle rather than hand-written SQL, and the database resides at database/review-content.sqlite under the stable rtq-review workspace root independently of RTQ_CONTENT_ROOT.",
+      "The main database is intentionally tracked with rtq-review so feedback can be read on other machines; only SQLite journal, WAL, and SHM sidecars are ignored.",
       "Every node uses its own rtq-uuid as its required comment identity and its own rtq-question-id only when present; no top-level question ID or UUID is inherited or persisted for a nested comment. A nested node inherits only the corresponding normalized source RAG state (rtq-question-rag or rtq-answer-rag) from its containing top-level question. Comments from other RAG states are immutable history and appear only when Show everything is enabled.",
       "App Router only; default to Server Components for filesystem reads and initial rendering data, and introduce Client Components only around interactive filtering, preferences, navigation, and review forms.",
       "Interactive state crossing the Server Component boundary must be plain serializable data.",
@@ -153,8 +153,8 @@
         "Outcome requests use a Node-runtime same-origin Next.js adapter that allowlists question and answer outcome actions, validates UUID, sheet, outcome, and reviewer fields, forwards only required fields to review-api, and returns upstream status and safe errors without exposing secrets or workbook data.",
         "Outcome controls are disabled with a clear reason when UUID or sheet routing metadata is unavailable; success is labelled as submitted to Google Sheets rather than saved to TOML, and a local pending override prevents the page from falsely showing the old value during the current view.",
         "A Drizzle schema and committed migrations create an append-only comments table with a generated comment ID, idempotent submission ID, optional node-owned rtq-question-id, required node-owned rtq-uuid, side constrained to question or answer, normalized inherited top-level source RAG state, comment text, reviewer identity, and server-generated UTC creation timestamp; the UUID, side, state, and chronological query path is indexed without making that combination unique because multiple comments are allowed.",
-        "The application resolves the SQLite database as database/review-content.sqlite under the same configured active rtq-content checkout from which it reads TOML, creates the database directory when needed, and fails with a clear recoverable error when the local database cannot be opened or migrated.",
-        "The rtq-content root .gitignore contains the narrow /database/review-content.sqlite* rule covering the database and SQLite journal/WAL/SHM sidecars; an automated check proves those runtime files are ignored and no database file is added to source control.",
+        "The application resolves the SQLite database as database/review-content.sqlite under the stable rtq-review workspace root independently of the configured rtq-content checkout, creates the database directory when needed, and fails with a clear recoverable error when the database cannot be opened or migrated.",
+        "The main database is tracked in rtq-review while its SQLite journal/WAL/SHM sidecars are narrowly ignored; an automated check proves both boundaries.",
         "Comment listing is performed server-side and batched for the visible paper identities rather than issuing one database query per question; no database path, SQL detail, or unrelated comment record reaches the browser.",
         "A reviewer can append a nonblank question-side or answer-side comment to a question, subquestion, or sub-subquestion when that exact node has rtq-uuid and its containing top-level question has the corresponding current source RAG state; the node's own rtq-question-id is retained when present but never inherited, and the server recursively resolves the node and verifies its UUID plus inherited top-level state against the selected read model rather than trusting arbitrary client routing fields.",
         "Submitting a comment never calls review-api or Google Sheets, creates exactly one immutable SQLite record through Drizzle, and returns the stored ID, reviewer, side, RAG state, and creation time needed to render it immediately without a page reload.",
@@ -166,7 +166,7 @@
         "Tests use a temporary SQLite database and a mocked upstream service to cover schema migration, durable reloads, top-level/subquestion/sub-subquestion UUID isolation, optional non-inherited question IDs, inherited top-level question/answer RAG states, current-only and Show everything presentation, chronological multi-comment display, immediate append feedback, invalid or spoofed identities, blank comments, idempotent retry behavior without preventing distinct comments, database failures, absence of edit/delete/reset paths, the question/answer outcome endpoint map, every allowed outcome, missing routing metadata, upstream failures, success feedback, preservation of pending UI state, and formulas/tips rendering before workings."
       ],
       "steps": [],
-      "notes": "Implemented and revised on 2026-09-06 in review-content-web. Top-level questions retain independent question/answer Google Sheets outcome controls for all 12 review-api outcomes. Comments use a separate POST-only adapter that never calls review-api. Every question, subquestion, and sub-subquestion now has contextual question-side and answer-side comment controls keyed by that node's own required UUID and its own optional rtq-question-id; no parent ID or UUID is inherited or persisted. Recursive server verification locates the exact node in live TOML and derives only the corresponding question or answer RAG state from its containing top-level question. Current-state feedback renders against the exact node by default, and the page-level Show everything toggle reveals labelled, immutable other-state history. Initial loading recursively collects all node identities and performs one batched Drizzle query. A generated forward migration preserves existing comments, makes rtq-question-id nullable, and indexes UUID, optional question ID, side, RAG state, and chronology. The repository remains append/list/close only, with no edit, reset, or delete route. Formula and tip fields now render before their associated working. The SQLite database remains <rtq-content>/database/review-content.sqlite and is narrowly Git-ignored with its sidecars. Tests cover migrations, durable reload, nullable identity isolation, recursive sub-subquestion resolution, inherited question/answer RAG, chronological history, immediate append feedback, idempotency, validation/spoofing, safe failures, all outcomes, and duplicate suppression. Workspace lint, format, types and 52 tests pass; the production build and live route/API smoke pass. The smoke renders nested feedback for a real subquestion, verifies Formula → Tip → Working order, rejects a stale nested-state comment without insertion, and leaves the local database at zero comments. Cross-reload outcomes still depend on the existing Sheets-to-canonical synchronization cycle. The ignored SQLite file requires separate backup if it needs preservation. The existing runtime sibling-path NFT trace warning remains non-fatal.",
+      "notes": "Implemented and revised on 2026-09-06 in review-content-web. Top-level questions retain independent question/answer Google Sheets outcome controls for all 12 review-api outcomes. Comments use a separate POST-only adapter that never calls review-api. Every question, subquestion, and sub-subquestion now has contextual question-side and answer-side comment controls keyed by that node's own required UUID and its own optional rtq-question-id; no parent ID or UUID is inherited or persisted. Recursive server verification locates the exact node in live TOML and derives only the corresponding question or answer RAG state from its containing top-level question. Current-state feedback renders against the exact node by default, and the page-level Show everything toggle reveals labelled, immutable other-state history. Initial loading recursively collects all node identities and performs one batched Drizzle query. A generated forward migration preserves existing comments, makes rtq-question-id nullable, and indexes UUID, optional question ID, side, RAG state, and chronology. The repository remains append/list/close only, with no edit, reset, or delete route. Formula and tip fields now render before their associated working. On 2026-09-07 the database path moved to the tracked <rtq-review>/database/review-content.sqlite file so feedback is distributed for read-only use on other machines; only transient SQLite sidecars remain ignored. Tests cover migrations, durable reload, nullable identity isolation, recursive sub-subquestion resolution, inherited question/answer RAG, chronological history, immediate append feedback, idempotency, validation/spoofing, safe failures, all outcomes, and duplicate suppression. Cross-reload outcomes still depend on the existing Sheets-to-canonical synchronization cycle. The existing runtime sibling-path NFT trace warning remains non-fatal.",
       "children": []
     },
     {
@@ -210,7 +210,7 @@
       "status": "done",
       "description": "Make the renamed and new applications understandable and independently runnable, then update the rtq-content-owned tmux stack so every maintained review service starts with an explicit non-conflicting port.",
       "acceptanceCriteria": [
-        "The root README and new application README explain purpose, source-of-truth boundaries, supported collections, filtering semantics, Google Sheets outcome synchronization, the <rtq-content>/database/review-content.sqlite machine-local persistence location and backup implications, environment/path configuration, local URL, and checks.",
+        "The root README and new application README explain purpose, source-of-truth boundaries, supported collections, filtering semantics, Google Sheets outcome synchronization, the versioned <rtq-review>/database/review-content.sqlite persistence location, environment/path configuration, local URL, and checks.",
         "The root package exposes correctly named start commands for review-markdown-web and review-content-web, updates stale review-web command references, and retains compatibility aliases only if they are documented and useful.",
         "The rtq-content-owned tmux YAML starts the primary review-content-web on port 3001, moves review-markdown-web to port 3004, starts docs-web on port 3005, and starts the other maintained review services on their existing assigned ports.",
         "Starting the tmux stack brings up all configured services together, and HTTP smoke checks confirm that review-content-web responds on 3001, review-markdown-web responds on 3004, and docs-web responds on 3005 without a port collision.",
@@ -394,6 +394,22 @@
       "steps": [],
       "notes": "Reported and corrected on 2026-09-06. The active content checkout contains 399 TOML papers in packages/papers/papers/allTopicsToml, while the review apps had registered allTagsToml, a directory that does not exist. Both apps now use the documented allTopicsToml name, with the collection remaining read-only in Tag Web. Awaiting user review.",
       "children": []
+    },
+    {
+      "id": "T18",
+      "title": "Version the review-comment database in rtq-review",
+      "status": "in_review",
+      "description": "Resolve Review Content Web's Drizzle SQLite database from the rtq-review workspace instead of rtq-content so the checked-in feedback database is available for read-only use on other machines.",
+      "acceptanceCriteria": [
+        "The default database path is <rtq-review>/database/review-content.sqlite and does not vary with RTQ_CONTENT_ROOT or the process working directory.",
+        "The existing tracked database file is preserved without copying from or modifying the former rtq-content database.",
+        "The main SQLite database remains tracked while review-content.sqlite-journal, review-content.sqlite-wal, and review-content.sqlite-shm remain ignored.",
+        "The application continues to use Drizzle for migration, listing, and append-only comment writes, with temporary-database tests isolated from the tracked database.",
+        "Documentation and automated repository checks describe and enforce the new versioned database boundary; formatting, lint, types, tests, and the production build pass."
+      ],
+      "steps": [],
+      "notes": "Requested and implemented on 2026-09-07. The user had already committed database/review-content.sqlite in rtq-review; the runtime now resolves that exact file through REVIEW_WORKSPACE_ROOT. No database content was copied or rewritten. The repository check now requires the main file to be tracked and not ignored while requiring only SQLite sidecars to be ignored. Awaiting user review.",
+      "children": []
     }
   ],
   "validation": [
@@ -406,7 +422,7 @@
     "pnpm --filter rtq-review-content-web build",
     "Run the renamed review-markdown-web application's existing format, lint, type, test, and build checks through its new package identity",
     "Load the rtq-content tmux review-stack configuration and smoke-check review-content-web on port 3001, review-markdown-web on port 3004, and docs-web on port 3005",
-    "Verify git diffs contain only the renamed Markdown reviewer, the new content reviewer, the new read-only package, approved workspace/docs/tmux integration, the narrow rtq-content database ignore rule, and this PRD; functional changes to existing apps and user-owned Gatsby changes remain untouched"
+    "Verify the tracked rtq-review database and ignored SQLite sidecars, and ensure functional changes to existing apps and user-owned Gatsby changes remain untouched"
   ],
   "openQuestions": [
     "Confirm that initial collection support should follow the documented paper-level registry plus discovered exemplar levels, rather than automatically treating every future *Toml directory as a compatible paper collection.",
@@ -424,8 +440,8 @@
     "Keep every existing review application operational and exclude the legacy Gatsby application from design and reuse analysis.",
     "Read TOML and maths assets directly from the active rtq-content checkout at runtime; generated Markdown is not an input.",
     "Treat all paper content as read-only while retaining question-side and answer-side review outcome writes through review-api to Google Sheets.",
-    "Persist new question-side and answer-side comments only through Drizzle in <rtq-content>/database/review-content.sqlite. Each node is keyed by its own UUID and own question ID when present; nested nodes inherit only the corresponding top-level RAG state and never the parent's identity. History is append-only with no reset or delete behavior.",
-    "Keep the SQLite runtime database machine-local and untracked by ignoring /database/review-content.sqlite* in the rtq-content root; do not synchronize it between checkouts or machines.",
+    "Persist new question-side and answer-side comments only through Drizzle in the tracked <rtq-review>/database/review-content.sqlite file. Each node is keyed by its own UUID and own question ID when present; nested nodes inherit only the corresponding top-level RAG state and never the parent's identity. History is append-only with no reset or delete behavior.",
+    "Version the main SQLite database with rtq-review so feedback can be read on other machines, while keeping its journal, WAL, and SHM sidecars untracked.",
     "Show exact-current-state comments as active feedback by default; expose immutable comments from other RAG states only through a page-level Show everything toggle.",
     "Use dimensional tags as runtime filter facets and support combining tags from different dimensions.",
     "Preserve canonical TOML as the complete-paper source of truth and treat generated TOML folders as replaceable projections.",

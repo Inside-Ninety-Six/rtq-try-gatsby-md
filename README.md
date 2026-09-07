@@ -20,8 +20,8 @@ maths-colour macro catalogue.
   Next.js reviewer and the primary review application. It reads paper TOML
   from the active `rtq-content` checkout without generated Markdown, submits
   outcomes to Google Sheets through `review-api`, and keeps append-only
-  comments in the machine-local
-  `rtq-content/database/review-content.sqlite` database.
+  comments in the versioned `database/review-content.sqlite` database in this
+  repository.
 - [`apps/review-markdown-web`](apps/review-markdown-web) is the maintained
   Next.js application for reviewing generated paper Markdown and submitting
   review actions.
@@ -54,14 +54,16 @@ from the command's current directory. The resolver validates
 `@rtq/content-workspace`, `@rtq/papers`, and `@rtq/maths-assets` before use and
 derives papers and assets from that one checkout.
 
-Review Content Web exposes canonical paper TOML, the seven generated focus,
+Review Content Web exposes canonical paper TOML, the eight generated focus,
 topic, and RAG collections, and exemplar tiers. Its five dimensional tag axes
 use OR matching within an axis and AND matching across axes. Question and
 answer RAG-state filters are independent. Filter state is encoded in the URL,
 while display preferences are remembered in browser storage; Reset filters
 clears both. Source TOML remains read-only: review outcomes go to Google Sheets
 through Review API, while contextual append-only comments go to the local
-SQLite database.
+SQLite database. The main database is committed with `rtq-review` so its
+feedback can be read on other machines; SQLite journal, WAL, and SHM sidecars
+remain ignored.
 
 Run an application from the workspace root on its assigned port:
 

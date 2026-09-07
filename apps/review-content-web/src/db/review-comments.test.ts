@@ -4,8 +4,11 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { REVIEW_WORKSPACE_ROOT } from '@rtq/review-repository-paths';
+
 import {
   openReviewCommentRepository,
+  REVIEW_COMMENT_DATABASE_PATH,
   ReviewCommentConflictError,
   ReviewDatabaseError,
   type ReviewCommentRepository,
@@ -13,6 +16,13 @@ import {
 import { appendVerifiedReviewComment } from '../lib/review-comments.ts';
 import { ReviewRequestError } from '../lib/review-server.ts';
 import type { ReviewTargetDescriptor } from '../lib/review-types.ts';
+
+test('resolves the shared review database inside the rtq-review workspace', () => {
+  assert.equal(
+    REVIEW_COMMENT_DATABASE_PATH,
+    path.join(REVIEW_WORKSPACE_ROOT, 'database', 'review-content.sqlite'),
+  );
+});
 
 test('migrates, appends chronologically, retries idempotently, and reloads durably', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'rtq-review-comments-'));

@@ -102,18 +102,17 @@ outcome visible for the current browser session. Canonical TOML remains the
 cross-reload outcome source after the existing Sheets synchronization runs.
 
 Comments never call `review-api`. They are appended through Drizzle to
-`<rtq-content>/database/review-content.sqlite` on this machine. Every question,
-subquestion, and sub-subquestion uses its own UUID for feedback; its own
-`rtq-question-id` is retained only when present. Nested nodes inherit only the
-corresponding question or answer RAG state from their containing top-level
-question. Current-state comments appear against their exact node by default;
-**Show previous feedback** also reveals earlier-state history. Feedback uses a
+`<rtq-review>/database/review-content.sqlite`. Every question, subquestion, and
+sub-subquestion uses its own UUID for feedback; its own `rtq-question-id` is
+retained only when present. Nested nodes inherit only the corresponding
+question or answer RAG state from their containing top-level question.
+Current-state comments appear against their exact node by default; **Show
+previous feedback** also reveals earlier-state history. Feedback uses a
 prominent full-width treatment below its stable Add Comment form, so appended
 history does not move the composer farther down. All comments are read-only
-after creation, with no edit, delete, or reset route. The database, journal,
-WAL, and SHM files are ignored by the content repository and are not backed up
-by Git; back up the database file separately if this local review history must
-be retained.
+after creation, with no edit, delete, or reset route. The main SQLite database
+is versioned with this repository so feedback can be read from other machines;
+its journal, WAL, and SHM sidecars remain ignored.
 
 ## Checks and production build
 
@@ -122,7 +121,7 @@ pnpm --filter rtq-review-content-web format:check
 pnpm --filter rtq-review-content-web lint:check
 pnpm --filter rtq-review-content-web types
 pnpm --filter rtq-review-content-web test
-pnpm --filter rtq-review-content-web database:ignore:check
+pnpm --filter rtq-review-content-web database:tracking:check
 pnpm --filter rtq-review-content-web build
 ```
 

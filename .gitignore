@@ -7,3 +7,8 @@ node_modules/
 
 # Operating-system metadata
 .DS_Store
+
+# SQLite runtime sidecars; the main review database is intentionally versioned.
+/database/review-content.sqlite-journal
+/database/review-content.sqlite-shm
+/database/review-content.sqlite-wal

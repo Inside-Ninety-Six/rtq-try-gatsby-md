@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 
-import { resolveRtqContentRoot } from '@rtq/review-repository-paths';
+import { REVIEW_WORKSPACE_ROOT } from '@rtq/review-repository-paths';
 import Database from 'better-sqlite3';
 import { and, asc, eq, isNull, or } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
@@ -53,13 +53,11 @@ type OpenRepositoryOptions = Readonly<{
   now?: () => Date;
 }>;
 
-function databasePathFromContent(): string {
-  return path.join(
-    resolveRtqContentRoot(),
-    'database',
-    'review-content.sqlite',
-  );
-}
+export const REVIEW_COMMENT_DATABASE_PATH = path.join(
+  REVIEW_WORKSPACE_ROOT,
+  'database',
+  'review-content.sqlite',
+);
 
 function migrationPath(): string {
   return path.join(process.cwd(), 'drizzle');
@@ -99,7 +97,7 @@ function sameSubmission(
 export function openReviewCommentRepository(
   options: OpenRepositoryOptions = {},
 ): ReviewCommentRepository {
-  const databasePath = options.databasePath ?? databasePathFromContent();
+  const databasePath = options.databasePath ?? REVIEW_COMMENT_DATABASE_PATH;
   const migrationsFolder = options.migrationsFolder ?? migrationPath();
   const now = options.now ?? (() => new Date());
   let sqlite: Database.Database | undefined;
@@ -203,7 +201,7 @@ export function openReviewCommentRepository(
       // The recoverable error below is sufficient for the UI.
     }
     throw new ReviewDatabaseError(
-      'Local review comments are unavailable. Check the rtq-content database directory and migration files, then retry.',
+      'Review comments are unavailable. Check the rtq-review database directory and migration files, then retry.',
       { cause: error },
     );
   }
