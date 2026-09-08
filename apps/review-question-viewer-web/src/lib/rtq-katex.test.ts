@@ -3,7 +3,6 @@ import test from 'node:test';
 
 import katex from 'katex';
 
-// @ts-expect-error Node's native TypeScript runner requires the explicit extension.
 import { rtqKatexOptions } from './rtq-katex.ts';
 
 test('renders the shared equationNumber macro', () => {

@@ -31,6 +31,10 @@ const PAPER_LIST_TOKEN = /<\/?PaperList\b/;
 
 type MarkdownFence = Readonly<{ character: "`" | "~"; length: number }>;
 
+const PAPER_LIST_COMPATIBILITY_KEY = "RTQ_PAPER_LIST_STYLE";
+const PAPER_LIST_COMPATIBILITY_COMMENT =
+  /^<!--\s*RTQ_PAPER_LIST_STYLE:\s*([\s\S]*?)\s*-->$/;
+
 export function normalizePaperListStyleType(
   value: unknown,
   ordered: boolean,
@@ -146,9 +150,12 @@ function configureList(node: MdxElement): List {
     );
   }
 
-  const list = node.children[0];
+  return configureNativeList(node.children[0], authoredListStyleType(node));
+}
+
+function configureNativeList(list: List, authoredStyle: unknown): List {
   const listStyleType = normalizePaperListStyleType(
-    authoredListStyleType(node),
+    authoredStyle,
     Boolean(list.ordered),
   );
   const existingData = list.data as PaperListData | undefined;
@@ -163,6 +170,21 @@ function configureList(node: MdxElement): List {
   return list;
 }
 
+function compatibilityListStyleType(node: RootContent): unknown | undefined {
+  if (
+    node.type !== "html" ||
+    !node.value.includes(PAPER_LIST_COMPATIBILITY_KEY)
+  ) {
+    return undefined;
+  }
+
+  const match = node.value.match(PAPER_LIST_COMPATIBILITY_COMMENT);
+  if (!match) {
+    throw new Error("Malformed PaperList compatibility metadata.");
+  }
+  return match[1];
+}
+
 function transformChildren(parent: Root | Parent): void {
   for (let index = 0; index < parent.children.length; index += 1) {
     const child = parent.children[index] as RootContent;
@@ -174,6 +196,23 @@ function transformChildren(parent: Root | Parent): void {
     if (isParent(child)) transformChildren(child);
     if (isPaperList(child)) {
       parent.children[index] = configureList(child) as RootContent;
+      continue;
+    }
+
+    const compatibilityStyle = compatibilityListStyleType(child);
+    if (compatibilityStyle !== undefined) {
+      const list = parent.children[index + 1] as RootContent | undefined;
+      if (list?.type !== "list") {
+        throw new Error(
+          "PaperList compatibility metadata must be followed by one Markdown list.",
+        );
+      }
+      transformChildren(list);
+      parent.children.splice(index, 1);
+      parent.children[index] = configureNativeList(
+        list,
+        compatibilityStyle,
+      ) as RootContent;
     }
   }
 }

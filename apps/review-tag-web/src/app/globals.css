@@ -1181,14 +1181,11 @@ kbd {
 
 .rtq-markdown ul {
   padding-left: 1.4rem;
+  list-style-type: disc;
 }
 
-.rtq-markdown ul ul {
-  list-style: lower-alpha;
-}
-
-.rtq-markdown ul ul ul {
-  list-style: lower-roman;
+.rtq-markdown ol {
+  list-style-type: decimal;
 }
 
 .rtq-markdown pre {

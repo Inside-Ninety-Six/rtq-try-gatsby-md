@@ -197,6 +197,9 @@ importers:
       '@rtq/review-katex-options':
         specifier: workspace:*
         version: link:../../packages/review-katex-options
+      '@rtq/review-paper-markdown':
+        specifier: workspace:*
+        version: link:../../packages/review-paper-markdown
       '@rtq/review-repository-paths':
         specifier: workspace:*
         version: link:../../packages/repository-paths
@@ -288,6 +291,9 @@ importers:
       '@rtq/review-katex-options':
         specifier: workspace:*
         version: link:../../packages/review-katex-options
+      '@rtq/review-paper-markdown':
+        specifier: workspace:*
+        version: link:../../packages/review-paper-markdown
       '@rtq/review-repository-paths':
         specifier: workspace:*
         version: link:../../packages/repository-paths
@@ -385,6 +391,9 @@ importers:
       '@rtq/review-katex-options':
         specifier: workspace:*
         version: link:../../packages/review-katex-options
+      '@rtq/review-paper-markdown':
+        specifier: workspace:*
+        version: link:../../packages/review-paper-markdown
       '@rtq/review-repository-paths':
         specifier: workspace:*
         version: link:../../packages/repository-paths

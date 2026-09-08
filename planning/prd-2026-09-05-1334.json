@@ -467,7 +467,7 @@
     {
       "id": "T22",
       "title": "Establish the shared PaperList review-rendering contract",
-      "status": "in_review",
+      "status": "done",
       "description": "Create one narrow shared review-markdown boundary that understands the authored PaperList wrapper and gives every maintained review renderer the same validated native-list presentation contract without importing private code from rtq-web.",
       "acceptanceCriteria": [
         "Recognize the exact authored wrapper name PaperList and its one optional listStyleType string while leaving ordinary unwrapped Markdown lists valid.",
@@ -481,13 +481,13 @@
         "Focused shared tests cover every supported value, normalization and fallback, ol and ul defaults, semantic and start preservation, exact-one-list validation, nested isolation, fenced examples, malformed structures, KaTeX/Markdown descendants, and removal of private wrapper metadata from native HTML."
       ],
       "steps": [],
-      "notes": "Requirements derived on 2026-09-08 from rtq-web/apps/web/planning/prd-2026-08-26-0402.json T61. Implemented @rtq/review-paper-markdown as the renderer-neutral contract with the ten-value allowlist, semantic defaults, exact-list validation, wrapper-free output, independently resolved nesting, fenced-example preservation, and safe malformed-content fallback. Review correction on 2026-09-08 made validation conditional on active non-fenced PaperList markup and enabled remark-math before MDX parsing so LaTeX braces are never sent to Acorn. Focused format, type, and 9 contract tests passed. Awaiting user review.",
+      "notes": "Requirements derived on 2026-09-08 from rtq-web/apps/web/planning/prd-2026-08-26-0402.json T61. Implemented @rtq/review-paper-markdown as the renderer-neutral contract with the ten-value allowlist, semantic defaults, exact-list validation, wrapper-free output, independently resolved nesting, fenced-example preservation, and safe malformed-content fallback. Review correction on 2026-09-08 made validation conditional on active non-fenced PaperList markup and enabled remark-math before MDX parsing so LaTeX braces are never sent to Acorn. Focused format, type, and 9 contract tests passed. Accepted by the user and marked done on 2026-09-08.",
       "children": []
     },
     {
       "id": "T23",
       "title": "Render PaperList in Review Content Web",
-      "status": "in_review",
+      "status": "done",
       "description": "Integrate the shared PaperList contract into Review Content Web's direct-TOML preparation and ReactMarkdown rendering so authored list markers appear correctly throughout complete papers.",
       "acceptanceCriteria": [
         "PaperList renders in every Review Content Web Markdown-capable paper field: question, answer option/key/value, working, formula, and tip, at every question nesting depth.",
@@ -498,13 +498,13 @@
         "Focused preparation, component, and rendered-route tests cover wrapped and raw defaults, representative ordered and unordered supported styles, nesting, every field family, malformed source presentation, and unchanged raw-source output; the app's format, lint, type, test, and production-build checks pass."
       ],
       "steps": [],
-      "notes": "Implemented on 2026-09-08 through Review Content Web's central field-preparation boundary and ReactMarkdown stack. Valid PaperList source remains intact until the shared AST transform, raw source is unchanged, semantic defaults are explicit for nested unwrapped lists, and malformed structures produce a preparation issue with readable content. Review correction verified all 145 Markdown-capable fields in the reported Manchester Grammar paper with zero preparation failures. The full app check passed: format, lint, types, 54 tests, database tracking, and production build. The existing Turbopack broad-trace warning remains unrelated. Awaiting user review.",
+      "notes": "Implemented on 2026-09-08 through Review Content Web's central field-preparation boundary and ReactMarkdown stack. Valid PaperList source remains intact until the shared AST transform, raw source is unchanged, semantic defaults are explicit for nested unwrapped lists, and malformed structures produce a preparation issue with readable content. Review correction verified all 145 Markdown-capable fields in the reported Manchester Grammar paper with zero preparation failures. The full app check passed: format, lint, types, 54 tests, database tracking, and production build. The existing Turbopack broad-trace warning remains unrelated. Accepted by the user and marked done on 2026-09-08.",
       "children": []
     },
     {
       "id": "T24",
       "title": "Render PaperList in Review Tag Web",
-      "status": "todo",
+      "status": "in_review",
       "description": "Integrate the shared PaperList contract into Tag Web's direct-TOML content enrichment and ReactMarkdown surface while keeping tag mutation boundaries unchanged.",
       "acceptanceCriteria": [
         "PaperList renders with the shared validated CSS marker in every Tag Web Markdown-capable field and at question, subquestion, and sub-subquestion depth, including read-only generated collections such as allTopicsToml.",
@@ -515,13 +515,13 @@
         "Focused tests cover the supported styles, ordered/unordered defaults, nested isolation, every field family, read-only collection rendering, malformed wrappers, and the unchanged tag-edit boundary; format, lint, type, test, and production-build checks pass."
       ],
       "steps": [],
-      "notes": "Tag Web currently has its own PaperTable wrapper normalizer and depth-based ul marker CSS. The integration must remove that marker-policy conflict while leaving Tag Web's unrelated presentation and editing behavior intact.",
+      "notes": "Implemented on 2026-09-08. Tag Web now validates PaperList at its central Markdown preparation boundary and renders it with the shared ReactMarkdown plugins. Its depth-derived marker CSS was replaced by semantic disc/decimal defaults, while allTopicsToml remains visible and read-only and tag mutation boundaries are unchanged. Shared contract tests cover all ten styles; the 26-test app suite, format, lint, types, and production build pass. Ready for user review.",
       "children": []
     },
     {
       "id": "T25",
       "title": "Render PaperList in Review Question Viewer",
-      "status": "todo",
+      "status": "in_review",
       "description": "Integrate the shared PaperList contract into Question Viewer's single-question preparation and ReactMarkdown rendering so isolated nested nodes match complete-paper review presentation.",
       "acceptanceCriteria": [
         "PaperList renders with the shared validated CSS marker in all Question Viewer Markdown-capable fields for a question, subquestion, or sub-subquestion selected on its own.",
@@ -532,13 +532,13 @@
         "Focused tests cover representative supported values, normalization and fallback, all field families, nested isolation, a directly selected nested node, malformed wrappers, and raw-versus-rendered presentation; format, lint, type, test, and production-build checks pass."
       ],
       "steps": [],
-      "notes": "Question Viewer and Tag Web currently have related but separate preparation stacks. This task integrates the common PaperList boundary only; broader consolidation of their existing asset code remains out of scope.",
+      "notes": "Implemented on 2026-09-08. Question Viewer now validates PaperList through its established preparation/error boundary and uses the shared ReactMarkdown plugins for isolated top-level and nested targets without changing raw/debug or visibility controls. Semantic list defaults and existing asset, maths, and working composition are preserved. The 18-test app suite, format, lint, types, and production build pass. Ready for user review.",
       "children": []
     },
     {
       "id": "T26",
       "title": "Render PaperList in Review Markdown Web",
-      "status": "todo",
+      "status": "in_review",
       "description": "Preserve PaperList style intent through generated-Markdown compatibility output and apply the shared contract in Review Markdown Web's server-side Markdown renderer without changing its review workflow.",
       "acceptanceCriteria": [
         "Generated Markdown retains each valid PaperList listStyleType in a normalized, inert compatibility form that Review Markdown Web can consume while renderers that do not understand it can safely ignore it and still display the native Markdown list body.",
@@ -550,7 +550,7 @@
         "Focused rtq-content compatibility tests and Review Markdown Web renderer tests cover all supported values, safe inert transport, legacy-ignore behavior, defaults, invalid fallback, nesting, fenced examples, malformed input, and representative generated paper output; affected format, lint, type, test, and production-build checks pass."
       ],
       "steps": [],
-      "notes": "This is the one cross-repository dependency. The rtq-web T61 draft currently requires legacy/review compatibility paths to strip balanced PaperList wrapper lines. That is sufficient for readable fallback but loses listStyleType. Because this requirement asks Review Markdown Web to match the other reviewers, rtq-content must preserve the normalized style as backward-compatible inert metadata rather than requiring Review Markdown Web to infer it from list depth.",
+      "notes": "Implemented on 2026-09-08 across rtq-review and rtq-content. The content generator now replaces balanced PaperList wrappers with normalized inert RTQ_PAPER_LIST_STYLE HTML comments while retaining ordinary Markdown list bodies; unaware renderers safely ignore the metadata. Review Markdown Web consumes that metadata through the shared unified plugin before HTML generation, with semantic fallback and clear malformed-metadata errors. Both rtq-content compatibility suites pass (3431 table assertions and 33 list assertions); Review Markdown Web's 16-test suite, format, lint, types, and production build pass. Ready for user review.",
       "children": []
     }
   ],

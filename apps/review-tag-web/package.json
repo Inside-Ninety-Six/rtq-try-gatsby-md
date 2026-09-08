@@ -13,11 +13,12 @@
     "format:check": "prettier --check .",
     "format:fix": "prettier --write .",
     "types": "tsc --noEmit",
-    "test": "node --no-warnings --test --experimental-strip-types src/lib/paper-asset-reader.test.ts src/lib/paper-paths.test.ts src/lib/paper-table-markdown.test.ts src/lib/paper-working-collections.test.ts src/lib/prepare-inline-long-division.test.ts src/lib/rtq-katex.test.ts"
+    "test": "node --no-warnings --test --experimental-strip-types src/lib/paper-asset-reader.test.ts src/lib/paper-list-markdown.test.ts src/lib/paper-paths.test.ts src/lib/paper-table-markdown.test.ts src/lib/paper-working-collections.test.ts src/lib/prepare-inline-long-division.test.ts src/lib/rtq-katex.test.ts"
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "@rtq/review-katex-options": "workspace:*",
+    "@rtq/review-paper-markdown": "workspace:*",
     "@rtq/review-repository-paths": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-popover": "^1.1.15",

@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
+import { validatePaperListMarkdown } from '@rtq/review-paper-markdown/validate';
+
 import {
   PAPER_IMAGE_EXTENSIONS,
   resolveCanonicalPaperImageExtension,
@@ -814,6 +816,7 @@ export function enrichRtqMarkdown(
     return '';
   }
 
+  validatePaperListMarkdown(text);
   const withPaperTables = normalizePaperTableMarkdown(text);
   const withWorkingSections = replaceWorkingSections(withPaperTables);
   const assetScope = options?.scopeType ?? 'question';

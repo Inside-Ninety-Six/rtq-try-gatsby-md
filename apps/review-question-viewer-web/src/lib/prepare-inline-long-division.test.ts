@@ -5,7 +5,6 @@ import test from 'node:test';
 
 import { resolveRtqContentPaths } from '@rtq/review-repository-paths';
 
-// @ts-expect-error Node's native TypeScript runner requires the explicit extension.
 import { prepareInlineLongDivisionSvg } from './prepare-inline-long-division.ts';
 
 async function findLongDivisionSvg(root: string): Promise<string | undefined> {

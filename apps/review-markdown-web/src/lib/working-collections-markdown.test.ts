@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import test from 'node:test';
 
-// @ts-expect-error Node's native TypeScript runner requires the explicit extension.
 import { renderMarkdownToHtml } from './markdown-renderer.ts';
 
 const generatedMarkdown = `

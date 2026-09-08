@@ -12,12 +12,13 @@
     "lint:fix": "eslint . --fix",
     "format:check": "prettier --check .",
     "format:fix": "prettier --write .",
-    "test": "node --no-warnings --test --experimental-strip-types src/lib/paper-asset-reader.test.ts src/lib/rtq-katex.test.ts src/lib/working-collections-markdown.test.ts",
+    "test": "node --no-warnings --test --experimental-strip-types src/lib/paper-asset-reader.test.ts src/lib/paper-list-markdown.test.ts src/lib/rtq-katex.test.ts src/lib/working-collections-markdown.test.ts",
     "types": "tsc --noEmit",
     "dev:remote": "NODE_OPTIONS=--use-system-ca RTQ_REVIEW_API_BASE_URL=https://rtq-review-api.ngrok.app next dev"
   },
   "dependencies": {
     "@rtq/review-katex-options": "workspace:*",
+    "@rtq/review-paper-markdown": "workspace:*",
     "@rtq/review-repository-paths": "workspace:*",
     "chokidar": "^5.0.0",
     "gray-matter": "^4.0.3",

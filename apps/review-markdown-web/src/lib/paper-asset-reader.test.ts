@@ -6,7 +6,6 @@ import test from 'node:test';
 
 import { REVIEW_WORKSPACE_ROOT } from '@rtq/review-repository-paths';
 
-// @ts-expect-error Node's native TypeScript runner requires the explicit extension.
 import * as paperAssetReader from './paper-asset-reader.ts';
 
 const {

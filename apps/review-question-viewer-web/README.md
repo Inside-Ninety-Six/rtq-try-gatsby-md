@@ -49,6 +49,10 @@ JSON metadata and generated LongDivision sources remain non-public, with
 LongDivision prepared inline by the canonical asset-repository command. No
 paper assets are mirrored into this repository's `public/` tree.
 
+Authored `PaperList` wrappers use the shared review Markdown contract for a
+selected question and all of its nested content. Rendered markers follow the
+validated `listStyleType`, while the viewer's raw source remains unchanged.
+
 ## Checks and production build
 
 ```bash

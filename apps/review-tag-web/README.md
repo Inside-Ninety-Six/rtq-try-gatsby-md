@@ -52,6 +52,11 @@ The generated `allTopicsToml` collection and discovered
 read-only. Tag mutations remain available only for the canonical and existing
 editable derived collections.
 
+Authored `PaperList` wrappers render through the shared review Markdown
+contract in every question, answer, working, formula, and tip field. The
+wrapper changes only the browser-native list marker; it does not expand Tag
+Review's content-editing boundary.
+
 ## Checks and production build
 
 ```bash

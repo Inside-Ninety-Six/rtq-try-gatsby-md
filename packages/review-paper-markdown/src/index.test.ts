@@ -27,6 +27,16 @@ async function render(markdown: string): Promise<string> {
   return String(result);
 }
 
+async function renderCompatibility(markdown: string): Promise<string> {
+  const result = await unified()
+    .use(remarkParse)
+    .use(remarkPaperList)
+    .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeStringify, { allowDangerousHtml: true })
+    .process(markdown);
+  return String(result);
+}
+
 test("normalizes the exact supported values and semantic fallbacks", () => {
   for (const listStyleType of PAPER_LIST_STYLE_TYPES) {
     assert.equal(
@@ -169,4 +179,45 @@ test("rejects empty, non-list, multiple-list, and unbalanced wrappers", () => {
   ]) {
     assert.throws(() => validatePaperListMarkdown(source));
   }
+});
+
+test("consumes inert generated-Markdown compatibility metadata", async () => {
+  const html = await renderCompatibility(
+    "<!-- RTQ_PAPER_LIST_STYLE: upper-alpha -->\n\n3. Three\n4. Four",
+  );
+  assert.match(html, /<ol start="3" style="list-style-type: upper-alpha">/);
+  assert.doesNotMatch(html, /RTQ_PAPER_LIST_STYLE/);
+});
+
+test("uses semantic defaults for unsupported compatibility values", async () => {
+  assert.match(
+    await renderCompatibility(
+      "<!-- RTQ_PAPER_LIST_STYLE: symbols(x) -->\n\n- One",
+    ),
+    /<ul style="list-style-type: disc">/,
+  );
+});
+
+test("keeps generated nested styles independent", async () => {
+  const html = await renderCompatibility(
+    [
+      "<!-- RTQ_PAPER_LIST_STYLE: upper-roman -->",
+      "",
+      "1. Parent",
+      "   <!-- RTQ_PAPER_LIST_STYLE: square -->",
+      "",
+      "   - Child",
+    ].join("\n"),
+  );
+  assert.match(html, /<ol style="list-style-type: upper-roman">/);
+  assert.match(html, /<ul style="list-style-type: square">/);
+});
+
+test("rejects malformed or detached compatibility metadata", async () => {
+  await assert.rejects(() =>
+    renderCompatibility("<!-- RTQ_PAPER_LIST_STYLE upper-alpha -->\n\nText"),
+  );
+  await assert.rejects(() =>
+    renderCompatibility("<!-- RTQ_PAPER_LIST_STYLE: square -->\n\nText"),
+  );
 });

@@ -873,6 +873,14 @@ button {
   margin-bottom: 0;
 }
 
+.rtq-markdown ul {
+  list-style-type: disc;
+}
+
+.rtq-markdown ol {
+  list-style-type: decimal;
+}
+
 .rtq-markdown table {
   width: 100%;
   border-collapse: collapse;

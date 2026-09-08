@@ -51,6 +51,11 @@ requests are resolved at request time from `@rtq/maths-assets`; adjacent JSON
 and generated manifests remain server-only and cannot be requested through the
 asset route.
 
+Generated Markdown carries each authored `PaperList` style in a hidden inert
+compatibility comment. Review Markdown Web consumes that metadata through the
+shared review Markdown contract, removes it from output, and renders the same
+native ordered or unordered list marker as the direct-content reviewers.
+
 ## Checks and production build
 
 ```bash
