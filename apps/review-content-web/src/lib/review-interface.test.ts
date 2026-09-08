@@ -14,6 +14,8 @@ const macrosListUrl = new URL(
   '../components/macro-review-list.tsx',
   import.meta.url,
 );
+const markdownUrl = new URL('../components/rtq-markdown.tsx', import.meta.url);
+const preparePaperUrl = new URL('../lib/prepare-paper.ts', import.meta.url);
 
 test('display preferences use accessible switches and independent review sides', async () => {
   const component = await fs.readFile(componentUrl, 'utf8');
@@ -122,6 +124,36 @@ test('review surfaces stay light and reviewer-facing rem sizes stay readable', a
     remSizes.every((size) => size >= 0.875),
     `found a reviewer-facing rem size below 0.875rem: ${Math.min(...remSizes)}`,
   );
+});
+
+test('review Markdown uses the shared PaperList contract and semantic defaults', async () => {
+  const [markdown, preparation, css] = await Promise.all([
+    fs.readFile(markdownUrl, 'utf8'),
+    fs.readFile(preparePaperUrl, 'utf8'),
+    fs.readFile(cssUrl, 'utf8'),
+  ]);
+
+  assert.match(markdown, /@rtq\/review-paper-markdown/);
+  assert.match(markdown, /remarkPaperListMdx/);
+  assert.match(markdown, /remarkPaperList/);
+  assert.match(
+    preparation,
+    /const paperLists = preparePaperListMarkdown\(tables\)/,
+  );
+  assert.match(preparation, /rendered: normalizeWorkingSections\(prepared/);
+  assert.match(preparation, /children: node\.children\.map\(prepareNode\)/);
+  assert.match(
+    preparation,
+    /question: prepareField\(node\.content\.question\)/,
+  );
+  assert.match(preparation, /answer: prepareField\(answer\.answer\)/);
+  assert.match(preparation, /key: prepareField\(answer\.key\)/);
+  assert.match(preparation, /option: prepareField\(answer\.option\)/);
+  assert.match(preparation, /formulas: working\.formulas\.map/);
+  assert.match(preparation, /tips: working\.tips\.map/);
+  assert.match(preparation, /working: prepareField\(working\.working/);
+  assert.match(css, /\.rtq-markdown ul\s*{[^}]*list-style-type:\s*disc/s);
+  assert.match(css, /\.rtq-markdown ol\s*{[^}]*list-style-type:\s*decimal/s);
 });
 
 test('the landing page uses a compact paper-first introduction', async () => {

@@ -13,6 +13,11 @@ review comments. A filter-aware left rail links directly to every visible
 question, subquestion, and sub-subquestion. The read-only `allTopicsToml`
 collection exposes the complete one-way projection across every active tag.
 
+Authored `PaperList` wrappers render directly in question, answer, working,
+formula, and tip Markdown. The optional `listStyleType` uses the shared review
+contract and browser-native CSS markers; raw source retains the authored
+wrapper. Unwrapped ordered and unordered lists default to `decimal` and `disc`.
+
 The paper index also links to a dedicated read-only view of the canonical
 `packages/papers/scripts/papers/lib/model/macros.toml`. That page treats the
 file as one review document and shows every macro's source and rendered

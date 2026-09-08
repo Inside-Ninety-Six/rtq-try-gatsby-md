@@ -15,12 +15,13 @@
     "lint:fix": "eslint . --fix",
     "format:check": "prettier --check .",
     "format:fix": "prettier --write .",
-    "test": "node --no-warnings --test --experimental-strip-types src/db/review-comments.test.ts src/lib/paper-asset-reader.test.ts src/lib/paper-table-markdown.test.ts src/lib/review-interface.test.ts src/lib/review-server.test.ts src/lib/review-view-model.test.ts src/lib/rtq-katex.test.ts src/lib/source-freshness.test.ts src/lib/working-sections.test.ts src/lib/workspace-view-model.test.ts",
+    "test": "node --no-warnings --test --experimental-strip-types src/db/review-comments.test.ts src/lib/paper-asset-reader.test.ts src/lib/paper-list-markdown.test.ts src/lib/paper-table-markdown.test.ts src/lib/review-interface.test.ts src/lib/review-server.test.ts src/lib/review-view-model.test.ts src/lib/rtq-katex.test.ts src/lib/source-freshness.test.ts src/lib/working-sections.test.ts src/lib/workspace-view-model.test.ts",
     "test:browser": "node scripts/browser-smoke.mjs",
     "types": "tsc --noEmit"
   },
   "dependencies": {
     "@rtq/review-katex-options": "workspace:*",
+    "@rtq/review-paper-markdown": "workspace:*",
     "@rtq/review-paper-model": "workspace:*",
     "@rtq/review-repository-paths": "workspace:*",
     "better-sqlite3": "^13.0.3",

@@ -8,7 +8,8 @@
     "Create a new internal Next.js review application that reads RTQ paper TOML and canonical maths assets directly from the active rtq-content checkout.",
     "Allow reviewers to browse paper collections and refine a selected paper at runtime using the five dimensional tag axes without generating a new Markdown view.",
     "Retain the established question and answer review-outcome workflow through review-api and Google Sheets, while storing append-only, RAG-state-specific comments in a versioned rtq-review SQLite database through Drizzle and never editing paper content.",
-    "Give the maintained reviewers unambiguous names by renaming the existing generated-Markdown application to review-markdown-web and naming the new direct-content application review-content-web."
+    "Give the maintained reviewers unambiguous names by renaming the existing generated-Markdown application to review-markdown-web and naming the new direct-content application review-content-web.",
+    "Render the authored PaperList contract consistently across every maintained non-legacy review website while preserving native Markdown list semantics and browser-standard CSS markers."
   ],
   "scope": {
     "in": [
@@ -27,10 +28,12 @@
       "Source freshness while a paper is open, clear loading/empty/error/stale states, keyboard- and screen-reader-usable controls, and responsive paper navigation.",
       "A tested read-only paper model boundary that can be adopted by existing review applications later without requiring their migration in this iteration.",
       "Register the primary review-content-web in the rtq-content-owned tmux YAML on port 3001, move review-markdown-web to port 3004, and move docs-web to port 3005 so all maintained review services start together.",
+      "A shared review-rendering contract for the authored PaperList wrapper and its constrained listStyleType values, integrated independently into review-content-web, review-tag-web, review-question-viewer-web, and review-markdown-web.",
       "Workspace scripts, application documentation, and proportionate unit, integration, browser-smoke, type, lint, format, and production-build validation."
     ],
     "out": [
-      "Changing the behavior of review-markdown-web, review-tag-web, review-question-viewer-web, docs-web, or review-legacy-gatsby-web beyond the explicitly required rename, command/reference updates, and tmux port assignment.",
+      "Changing review-markdown-web, review-tag-web, or review-question-viewer-web beyond the explicitly required PaperList rendering compatibility, existing rename work, command/reference updates, and tmux port assignment.",
+      "Adding PaperList support to docs-web or review-legacy-gatsby-web.",
       "Using review-legacy-gatsby-web as an implementation or design basis.",
       "Editing canonical or derived TOML, tags, answers, workings, assets, or any other rtq-content source from the new application.",
       "Replacing the existing review-api or Google Sheets review-outcome persistence workflow.",
@@ -460,6 +463,95 @@
       "steps": [],
       "notes": "Requested and implemented on 2026-09-07 to reduce repeated noise on mixed-RAG papers. Awaiting user review.",
       "children": []
+    },
+    {
+      "id": "T22",
+      "title": "Establish the shared PaperList review-rendering contract",
+      "status": "in_review",
+      "description": "Create one narrow shared review-markdown boundary that understands the authored PaperList wrapper and gives every maintained review renderer the same validated native-list presentation contract without importing private code from rtq-web.",
+      "acceptanceCriteria": [
+        "Recognize the exact authored wrapper name PaperList and its one optional listStyleType string while leaving ordinary unwrapped Markdown lists valid.",
+        "Support exactly these CSS list-style-type keywords: none, disc, circle, square, decimal, decimal-leading-zero, lower-alpha, upper-alpha, lower-roman, and upper-roman; do not introduce aliases, arbitrary CSS, custom counters, symbols, images, CSS-wide keywords, or a separate marker vocabulary.",
+        "Normalize listStyleType case-insensitively after trimming. Missing, malformed-value, and unsupported values fall back to decimal for a direct ordered list and disc for a direct unordered list, matching the rtq-web PaperList contract.",
+        "Require one native Markdown ordered or unordered list as the wrapper's direct semantic child. Remove the wrapper from rendered output while preserving the list's ol or ul identity, li children, start value, authored order, nested content, links, KaTeX, and other supported Markdown descendants.",
+        "Apply only the validated browser-standard CSS list-style-type to the direct wrapped list. The shared contract adds no custom glyphs, punctuation, colour, typography, spacing, indentation, marker positioning, or branded treatment and does not accept question, answer, working, tip, or formula context as authored input.",
+        "A wrapped parent list does not pass its style into a nested list. Each nested PaperList resolves independently, and each unwrapped nested list receives its own ordered-decimal or unordered-disc semantic default.",
+        "Literal PaperList examples inside fenced code remain unchanged. Structurally malformed, unbalanced, or non-list wrappers fail clearly rather than silently dropping content.",
+        "Expose the shared behavior through a renderer-neutral Markdown/AST integration that works with both ReactMarkdown clients and Review Markdown Web's server-side unified pipeline; consuming apps do not copy the allowlist or wrapper parser.",
+        "Focused shared tests cover every supported value, normalization and fallback, ol and ul defaults, semantic and start preservation, exact-one-list validation, nested isolation, fenced examples, malformed structures, KaTeX/Markdown descendants, and removal of private wrapper metadata from native HTML."
+      ],
+      "steps": [],
+      "notes": "Requirements derived on 2026-09-08 from rtq-web/apps/web/planning/prd-2026-08-26-0402.json T61. Implemented @rtq/review-paper-markdown as the renderer-neutral contract with the ten-value allowlist, semantic defaults, exact-list validation, wrapper-free output, independently resolved nesting, fenced-example preservation, and safe malformed-content fallback. Review correction on 2026-09-08 made validation conditional on active non-fenced PaperList markup and enabled remark-math before MDX parsing so LaTeX braces are never sent to Acorn. Focused format, type, and 9 contract tests passed. Awaiting user review.",
+      "children": []
+    },
+    {
+      "id": "T23",
+      "title": "Render PaperList in Review Content Web",
+      "status": "in_review",
+      "description": "Integrate the shared PaperList contract into Review Content Web's direct-TOML preparation and ReactMarkdown rendering so authored list markers appear correctly throughout complete papers.",
+      "acceptanceCriteria": [
+        "PaperList renders in every Review Content Web Markdown-capable paper field: question, answer option/key/value, working, formula, and tip, at every question nesting depth.",
+        "The rendered list uses the shared validated listStyleType mapping while raw source continues to show the original authored PaperList wrapper and attributes unchanged.",
+        "Unwrapped ordered and unordered lists retain decimal and disc defaults respectively, including nested unwrapped lists, rather than inheriting a depth-based marker style from surrounding CSS.",
+        "PaperList composition remains compatible with macro expansion, KaTeX, PaperTable, PaperImage, LongDivision, WorkingSection preparation, multiple workings, filters, review controls, and source-freshness handling.",
+        "The app does not duplicate the PaperList allowlist or introduce a second wrapper parser, custom marker graphics, or content mutation behavior.",
+        "Focused preparation, component, and rendered-route tests cover wrapped and raw defaults, representative ordered and unordered supported styles, nesting, every field family, malformed source presentation, and unchanged raw-source output; the app's format, lint, type, test, and production-build checks pass."
+      ],
+      "steps": [],
+      "notes": "Implemented on 2026-09-08 through Review Content Web's central field-preparation boundary and ReactMarkdown stack. Valid PaperList source remains intact until the shared AST transform, raw source is unchanged, semantic defaults are explicit for nested unwrapped lists, and malformed structures produce a preparation issue with readable content. Review correction verified all 145 Markdown-capable fields in the reported Manchester Grammar paper with zero preparation failures. The full app check passed: format, lint, types, 54 tests, database tracking, and production build. The existing Turbopack broad-trace warning remains unrelated. Awaiting user review.",
+      "children": []
+    },
+    {
+      "id": "T24",
+      "title": "Render PaperList in Review Tag Web",
+      "status": "todo",
+      "description": "Integrate the shared PaperList contract into Tag Web's direct-TOML content enrichment and ReactMarkdown surface while keeping tag mutation boundaries unchanged.",
+      "acceptanceCriteria": [
+        "PaperList renders with the shared validated CSS marker in every Tag Web Markdown-capable field and at question, subquestion, and sub-subquestion depth, including read-only generated collections such as allTopicsToml.",
+        "Existing Tag Web CSS that assigns lower-alpha and lower-roman from unordered-list nesting depth no longer overrides the PaperList contract or changes the required disc default for unwrapped nested unordered lists.",
+        "Macro expansion, KaTeX, PaperTable, PaperImage, LongDivision, WorkingSection, and existing question/answer/working enrichment continue to compose with PaperList without changing content order or list semantics.",
+        "PaperList support is rendering-only: it neither changes editable collection rules nor adds any path for editing PaperList source content from Tag Web.",
+        "Tag Web consumes the shared parser and value vocabulary rather than copying them into paper-assets or its ReactMarkdown component.",
+        "Focused tests cover the supported styles, ordered/unordered defaults, nested isolation, every field family, read-only collection rendering, malformed wrappers, and the unchanged tag-edit boundary; format, lint, type, test, and production-build checks pass."
+      ],
+      "steps": [],
+      "notes": "Tag Web currently has its own PaperTable wrapper normalizer and depth-based ul marker CSS. The integration must remove that marker-policy conflict while leaving Tag Web's unrelated presentation and editing behavior intact.",
+      "children": []
+    },
+    {
+      "id": "T25",
+      "title": "Render PaperList in Review Question Viewer",
+      "status": "todo",
+      "description": "Integrate the shared PaperList contract into Question Viewer's single-question preparation and ReactMarkdown rendering so isolated nested nodes match complete-paper review presentation.",
+      "acceptanceCriteria": [
+        "PaperList renders with the shared validated CSS marker in all Question Viewer Markdown-capable fields for a question, subquestion, or sub-subquestion selected on its own.",
+        "The renderer preserves native ol, ul, li, start, nesting, content order, links, and KaTeX behavior, while unwrapped lists retain ordered-decimal and unordered-disc defaults.",
+        "PaperList composes with the viewer's macro, PaperTable, PaperImage, LongDivision, WorkingSection, raw/debug, placeholder, and visibility behavior without changing unrelated controls or data loading.",
+        "Malformed PaperList structure produces the viewer's established safe preparation/error state and never leaks wrapper markup or unvalidated styles into the page.",
+        "Question Viewer consumes the shared parser and value vocabulary instead of extending its duplicated paper-assets path with another private implementation.",
+        "Focused tests cover representative supported values, normalization and fallback, all field families, nested isolation, a directly selected nested node, malformed wrappers, and raw-versus-rendered presentation; format, lint, type, test, and production-build checks pass."
+      ],
+      "steps": [],
+      "notes": "Question Viewer and Tag Web currently have related but separate preparation stacks. This task integrates the common PaperList boundary only; broader consolidation of their existing asset code remains out of scope.",
+      "children": []
+    },
+    {
+      "id": "T26",
+      "title": "Render PaperList in Review Markdown Web",
+      "status": "todo",
+      "description": "Preserve PaperList style intent through generated-Markdown compatibility output and apply the shared contract in Review Markdown Web's server-side Markdown renderer without changing its review workflow.",
+      "acceptanceCriteria": [
+        "Generated Markdown retains each valid PaperList listStyleType in a normalized, inert compatibility form that Review Markdown Web can consume while renderers that do not understand it can safely ignore it and still display the native Markdown list body.",
+        "Coordinate the rtq-content compatibility transformation planned by rtq-web T61 so it does not irreversibly discard PaperList style metadata on the generated-Markdown path used by Review Markdown Web; canonical TOML remains unchanged by this task.",
+        "Review Markdown Web's unified pipeline consumes the shared contract before HTML generation and emits the same validated browser-standard list-style-type result as the direct-TOML review applications.",
+        "The compatibility transport preserves ordered versus unordered semantics, start values, list items, nesting, authored order, KaTeX, links, tables, and surrounding generated-paper structure; nested PaperList instances remain independent.",
+        "Unsupported style values fall back from the actual list semantics, malformed/unbalanced wrappers or compatibility metadata fail clearly during generation or rendering, and literal examples inside fenced code remain unchanged.",
+        "The change does not expand dangerous-HTML handling, forward arbitrary style input, alter generated-Markdown routes, or change Google Sheets review outcomes, local display settings, comments, navigation, or copied-paper asset behavior.",
+        "Focused rtq-content compatibility tests and Review Markdown Web renderer tests cover all supported values, safe inert transport, legacy-ignore behavior, defaults, invalid fallback, nesting, fenced examples, malformed input, and representative generated paper output; affected format, lint, type, test, and production-build checks pass."
+      ],
+      "steps": [],
+      "notes": "This is the one cross-repository dependency. The rtq-web T61 draft currently requires legacy/review compatibility paths to strip balanced PaperList wrapper lines. That is sufficient for readable fallback but loses listStyleType. Because this requirement asks Review Markdown Web to match the other reviewers, rtq-content must preserve the normalized style as backward-compatible inert metadata rather than requiring Review Markdown Web to infer it from list depth.",
+      "children": []
     }
   ],
   "validation": [
@@ -472,6 +564,9 @@
     "pnpm --filter rtq-review-content-web build",
     "pnpm --filter rtq-review-api syntax:check",
     "pnpm --filter rtq-review-api dependencies:check",
+    "Run the shared PaperList review-rendering package format, lint, type, and focused contract tests",
+    "Run review-tag-web, review-question-viewer-web, and review-markdown-web format, lint, type, focused test, and production-build checks after their respective PaperList tasks",
+    "Run coordinated rtq-content PaperList compatibility tests before accepting Review Markdown Web's generated-artifact integration",
     "Run the renamed review-markdown-web application's existing format, lint, type, test, and build checks through its new package identity",
     "Load the rtq-content tmux review-stack configuration and smoke-check review-content-web on port 3001, review-markdown-web on port 3004, and docs-web on port 3005",
     "Verify the tracked rtq-review database and ignored SQLite sidecars, and ensure functional changes to existing apps and user-owned Gatsby changes remain untouched"
@@ -501,7 +596,11 @@
     "Use review-question-viewer-web as the primary reference for a structured raw/rendered content model and React-based review controls.",
     "Use review-markdown-web as the behavioral reference for bulk review, display preferences, and review action coverage, but do not reuse its generated-Markdown DOM mutation architecture.",
     "Do not modify review-api for local comment persistence; its outcome endpoints remain the Google Sheets boundary, and its legacy comment endpoints remain available only to existing applications.",
-    "Represent outcome reset as null inside Review Content Web and translate it to an empty Review API rag value that clears the validated Google Sheets outcome cell; never delete or reset SQLite feedback."
+    "Represent outcome reset as null inside Review Content Web and translate it to an empty Review API rag value that clears the validated Google Sheets outcome cell; never delete or reset SQLite feedback.",
+    "Treat rtq-web Paper Slug PRD T61 as the authoritative PaperList authoring contract: one optional listStyleType, ten exact CSS keywords, semantic decimal/disc defaults, native list semantics, independently styled nesting, and browser-standard marker rendering only.",
+    "Implement PaperList parsing and normalization once in a narrow renderer-neutral shared review package, then integrate that contract separately into Review Content Web, Tag Web, Question Viewer, and Review Markdown Web without sharing app-private UI code.",
+    "Exclude Docs Web and the legacy Gatsby reviewer from PaperList work.",
+    "For generated Markdown, preserve validated PaperList style intent as backward-compatible inert metadata so Review Markdown Web can render it while unaware consumers still display the unwrapped native list body."
   ],
   "notes": "Code review completed against the maintained Next.js applications, review-api, @rtq/review-repository-paths, the canonical dimensional-tag documentation, the derived-TOML runbook, the paper-review process, and the RAG-state architecture. The two direct-TOML apps currently duplicate substantial parser/asset/tag logic and have drifted in macros, PaperTable handling, placeholder behavior, types, and test coverage. The new app should reconcile a tested superset behind its own read-only package boundary; migration of existing apps can be considered later as a separate risk-controlled task. The review-web to review-markdown-web rename is naming/configuration work only, while the rtq-content tmux update is an explicitly required cross-repository integration change rather than a deferred follow-up."
 }

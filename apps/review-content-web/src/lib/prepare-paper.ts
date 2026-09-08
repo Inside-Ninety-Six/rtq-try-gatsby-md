@@ -16,6 +16,7 @@ import type {
   DisplayReviewPaper,
   DisplayWorkingSegment,
 } from './display-model';
+import { preparePaperListMarkdown } from './paper-list-markdown';
 import { normalizePaperTableMarkdown } from './paper-table-markdown';
 import {
   parseWorkingSections,
@@ -232,7 +233,8 @@ function prepareField(
     const tables = normalizePaperTableMarkdown(
       field.expanded.replace(MDX_COMMENT, ''),
     );
-    const images = tables.replace(IMAGE, (component) =>
+    const paperLists = preparePaperListMarkdown(tables);
+    const images = paperLists.markdown.replace(IMAGE, (component) =>
       paperImageMarkdown(component, field.context, imageIndex++),
     );
     const prepared = images.replace(LONG_DIVISION, (component) =>
@@ -255,7 +257,13 @@ function prepareField(
     );
     return {
       ...field,
-      ...(parsed.issue ? { preparationIssue: parsed.issue } : {}),
+      ...(paperLists.issue || parsed.issue
+        ? {
+            preparationIssue: [paperLists.issue, parsed.issue]
+              .filter(Boolean)
+              .join(' '),
+          }
+        : {}),
       rendered: normalizeWorkingSections(prepared, parsed),
       ...(workingSegments ? { workingSegments } : {}),
     };

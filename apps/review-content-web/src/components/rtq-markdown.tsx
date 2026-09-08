@@ -1,5 +1,9 @@
 'use client';
 
+import {
+  remarkPaperList,
+  remarkPaperListMdx,
+} from '@rtq/review-paper-markdown';
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
@@ -26,7 +30,12 @@ export function RtqMarkdown({ markdown }: { markdown: string }) {
           ),
         }}
         rehypePlugins={[[rehypeKatex, rtqKatexOptions]]}
-        remarkPlugins={[remarkGfm, remarkMath]}
+        remarkPlugins={[
+          remarkGfm,
+          remarkMath,
+          remarkPaperListMdx,
+          remarkPaperList,
+        ]}
       >
         {markdown}
       </ReactMarkdown>
