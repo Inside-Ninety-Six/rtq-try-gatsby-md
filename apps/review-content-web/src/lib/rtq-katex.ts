@@ -7,7 +7,7 @@ const reviewerKatexMacros: Record<string, string> = {
   '\\filledValue': '\\textcolor{green}{#1}',
   '\\green': '\\textcolor{green}{#1}',
   '\\incorrectValue': '\\textcolor{red}{#1}',
-  '\\maroonC': '\\textcolor{#ed5fa6}{#1}',
+  '\\maroonC': '\\textcolor{##ed5fa6}{#1}',
   '\\multiplyCarryOver': '\\scriptstyle \\grayF{#1}',
   '\\red': '\\textcolor{red}{#1}',
   '\\sequenceStep': '\\maroonC{\\footnotesize{(#1)}}',

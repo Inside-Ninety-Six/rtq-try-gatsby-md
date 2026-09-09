@@ -13,3 +13,13 @@ test('renders the shared equationNumber macro through Markdown', async () => {
   assert.match(html, /class="[^"]*rtq-maths-equation-number/);
   assert.ok(html.replace(/<[^>]+>/g, '').includes('(7)'));
 });
+
+test('renders sequenceStep with a fractional step through Markdown', async () => {
+  const html = await renderMarkdownToHtml(
+    String.raw`$\sequenceStep{\dfrac{1}{1}}$`,
+    rtqKatexMacros,
+  );
+
+  assert.doesNotMatch(html, /katex-error/);
+  assert.match(html, /color:#ed5fa6/);
+});
