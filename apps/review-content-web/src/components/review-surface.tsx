@@ -50,6 +50,8 @@ import {
   runUniqueReviewRequest,
   type LocalReviewComment,
   type ReviewCommentLoad,
+  type ReviewOutcomeDestination,
+  type ReviewOutcomeLoad,
   type ReviewOutcomeSelection,
   type ReviewSide,
   type ReviewTargetDescriptor,
@@ -142,6 +144,8 @@ type ReviewRuntimeState = Readonly<{
   ) => Promise<LocalReviewComment>;
   commentError?: string;
   comments: readonly LocalReviewComment[];
+  outcomeDestination: ReviewOutcomeDestination;
+  outcomeError?: string;
   outcomeOverrides: Readonly<Record<string, ReviewOutcomeSelection>>;
   pendingKeys: ReadonlySet<string>;
   reviewer: string;
@@ -244,12 +248,16 @@ function ReviewScope({
     commentGroups.current.length > 0 || commentGroups.history.length > 0;
   const displayedOutcome = Object.hasOwn(runtime.outcomeOverrides, key)
     ? runtime.outcomeOverrides[key]
-    : node.review[side].reviewOutcome;
+    : runtime.outcomeDestination === 'google-sheets'
+      ? node.review[side].reviewOutcome
+      : undefined;
   const outcomeDisabledReason = !target
     ? targetUnavailableReason(node, topLevelQuestion, side)
-    : !target.sheet
-      ? `Source state ${reviewStateLabel(target.ragState)} has no Google Sheets route.`
-      : undefined;
+    : runtime.outcomeError
+      ? runtime.outcomeError
+      : runtime.outcomeDestination === 'google-sheets' && !target.sheet
+        ? `Source state ${reviewStateLabel(target.ragState)} has no Google Sheets route.`
+        : undefined;
   const commentDisabledReason = !target
     ? targetUnavailableReason(node, topLevelQuestion, side)
     : runtime.commentError;
@@ -327,7 +335,8 @@ function ReviewScope({
                     : 'Not reviewed'}
                 </dd>
               </div>
-              {controlMode === 'advanced' ? (
+              {controlMode === 'advanced' &&
+              runtime.outcomeDestination === 'google-sheets' ? (
                 <div>
                   <dt>Sheet</dt>
                   <dd>{target?.sheet ?? 'Unavailable'}</dd>
@@ -1148,10 +1157,12 @@ function SourceFreshnessBanner({
 
 export function ReviewSurface({
   commentLoad,
+  outcomeLoad,
   paper,
   reviewer,
 }: {
   commentLoad: ReviewCommentLoad;
+  outcomeLoad: ReviewOutcomeLoad;
   paper: DisplayReviewPaper;
   reviewer: string;
 }) {
@@ -1168,7 +1179,7 @@ export function ReviewSurface({
   const [showPreviousFeedback, setShowPreviousFeedback] = useState(false);
   const [outcomeOverrides, setOutcomeOverrides] = useState<
     Readonly<Record<string, ReviewOutcomeSelection>>
-  >({});
+  >(outcomeLoad.outcomes);
   const [pendingKeys, setPendingKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -1314,6 +1325,8 @@ export function ReviewSurface({
       appendComment,
       commentError: commentLoad.error,
       comments,
+      outcomeDestination: outcomeLoad.destination,
+      outcomeError: outcomeLoad.error,
       outcomeOverrides,
       pendingKeys,
       reviewer,
@@ -1328,6 +1341,8 @@ export function ReviewSurface({
       appendComment,
       commentLoad.error,
       comments,
+      outcomeLoad.destination,
+      outcomeLoad.error,
       outcomeOverrides,
       paper.source.collection.id,
       paper.source.relativePath,

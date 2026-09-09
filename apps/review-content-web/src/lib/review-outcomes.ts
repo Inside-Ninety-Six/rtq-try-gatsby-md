@@ -1,11 +1,27 @@
+import type { ReviewPaper } from '@rtq/review-paper-model';
+import {
+  getReviewStore,
+  ReviewDatabaseError,
+  ReviewStoreValidationError,
+  type ReviewOutcomeRepository,
+} from '@rtq/review-store/server';
+
 import type { ReviewOutcomeRequest } from './review-server.ts';
+import {
+  isReviewOutcome,
+  reviewTargetForNode,
+  reviewTargetKey,
+  type ReviewOutcomeDestination,
+  type ReviewOutcomeLoad,
+  type ReviewOutcomeSelection,
+} from './review-types.ts';
 
 type ForwardOutcomeOptions = Readonly<{
   baseUrl: string;
   fetcher?: typeof fetch;
 }>;
 
-export type ForwardOutcomeResult = Readonly<{
+export type SubmitOutcomeResult = Readonly<{
   message: string;
   status: number;
 }>;
@@ -25,7 +41,7 @@ function safeUpstreamReason(text: string): string {
 export async function forwardReviewOutcome(
   input: ReviewOutcomeRequest,
   options: ForwardOutcomeOptions,
-): Promise<ForwardOutcomeResult> {
+): Promise<SubmitOutcomeResult> {
   if (!input.target.sheet) {
     return { message: 'No Google Sheets route is available.', status: 409 };
   }
@@ -64,4 +80,139 @@ export async function forwardReviewOutcome(
           : `${input.outcome} submitted to Google Sheets.`,
     status: response.status,
   };
+}
+
+type DatabaseOutcomeOptions = Readonly<{
+  repository?: ReviewOutcomeRepository;
+}>;
+
+export function persistReviewOutcome(
+  input: ReviewOutcomeRequest,
+  options: DatabaseOutcomeOptions = {},
+): SubmitOutcomeResult {
+  try {
+    const repository = options.repository ?? getReviewStore().outcomes;
+    if (input.outcome === null) {
+      repository.clear({
+        ragState: input.target.ragState,
+        side: input.target.side,
+        uuid: input.target.uuid,
+      });
+      return {
+        message: 'Review outcome reset in the review database.',
+        status: 200,
+      };
+    }
+    repository.set({
+      outcome: input.outcome,
+      ragState: input.target.ragState,
+      reviewer: input.reviewer,
+      side: input.target.side,
+      uuid: input.target.uuid,
+    });
+    return {
+      message:
+        input.outcome === 'PRG'
+          ? 'Approved and saved to the review database.'
+          : `${input.outcome} saved to the review database.`,
+      status: 200,
+    };
+  } catch (error) {
+    if (error instanceof ReviewStoreValidationError) {
+      return { message: 'The review outcome is not valid.', status: 400 };
+    }
+    if (error instanceof ReviewDatabaseError) {
+      return {
+        message: 'The review database is unavailable.',
+        status: 503,
+      };
+    }
+    throw error;
+  }
+}
+
+type SubmitReviewOutcomeOptions = Readonly<{
+  baseUrl: string;
+  destination: ReviewOutcomeDestination;
+  fetcher?: typeof fetch;
+  repository?: ReviewOutcomeRepository;
+}>;
+
+export async function submitReviewOutcome(
+  input: ReviewOutcomeRequest,
+  options: SubmitReviewOutcomeOptions,
+): Promise<SubmitOutcomeResult> {
+  if (options.destination === 'database') {
+    return persistReviewOutcome(input, { repository: options.repository });
+  }
+  return forwardReviewOutcome(input, {
+    baseUrl: options.baseUrl,
+    fetcher: options.fetcher,
+  });
+}
+
+export function reviewOutcomeTargetsForPaper(paper: ReviewPaper) {
+  const source = {
+    collectionId: paper.source.collection.id,
+    relativePath: paper.source.relativePath,
+  };
+  return paper.sections.flatMap((section) =>
+    section.questions.flatMap((question) =>
+      (['question', 'answer'] as const).flatMap((side) => {
+        const target = reviewTargetForNode(question, side, source);
+        return target
+          ? [
+              {
+                ragState: target.ragState,
+                side: target.side,
+                uuid: target.uuid,
+              },
+            ]
+          : [];
+      }),
+    ),
+  );
+}
+
+type LoadReviewOutcomeOptions = Readonly<{
+  repository?: ReviewOutcomeRepository;
+}>;
+
+export function loadReviewOutcomesForPaper(
+  paper: ReviewPaper,
+  destination: ReviewOutcomeDestination,
+  options: LoadReviewOutcomeOptions = {},
+): ReviewOutcomeLoad {
+  if (destination === 'google-sheets') {
+    return { destination, outcomes: {} };
+  }
+  try {
+    const repository = options.repository ?? getReviewStore().outcomes;
+    const targets = reviewOutcomeTargetsForPaper(paper);
+    const requested = new Set(
+      targets.map((target) =>
+        JSON.stringify([target.uuid, target.side, target.ragState]),
+      ),
+    );
+    const outcomes: Record<string, ReviewOutcomeSelection> = {};
+    for (const stored of repository.resolve(targets)) {
+      const identity = JSON.stringify([
+        stored.uuid,
+        stored.side,
+        stored.ragState,
+      ]);
+      if (!requested.has(identity) || !isReviewOutcome(stored.outcome)) {
+        throw new Error('The review database returned an invalid outcome.');
+      }
+      outcomes[reviewTargetKey(stored)] = stored.outcome;
+    }
+    return { destination, outcomes };
+  } catch {
+    return {
+      destination,
+      error:
+        'Review outcomes are unavailable. Check the rtq-review database directory and retry.',
+      outcomes: {},
+    };
+  }
 }

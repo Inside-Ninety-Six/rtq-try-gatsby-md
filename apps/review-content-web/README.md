@@ -3,7 +3,8 @@
 Internal Next.js application for reviewing RTQ paper content directly from the
 active `rtq-content` checkout. Unlike Review Markdown Web, this application does
 not consume generated Markdown. Paper content is always read-only; review
-outcomes use `review-api` and Google Sheets while comments remain machine-local.
+outcomes use one configured database or Google Sheets destination while comments
+remain machine-local.
 
 The application currently provides collection and file browsing, full nested
 paper presentation, five-axis runtime tag filters, independent question and
@@ -33,7 +34,13 @@ recorded in the canonical
 - A sibling `../rtq-content` checkout, or `RTQ_CONTENT_ROOT` set to a complete
   `rtq-content` Git root
 - The local `review-api` service at `http://localhost:4567`, or
-  `RTQ_REVIEW_API_BASE_URL` set to its server-only URL
+  `RTQ_REVIEW_API_BASE_URL` set to its server-only URL, when the outcome
+  destination is `google-sheets`
+
+`RTQ_REVIEW_OUTCOME_DESTINATION` selects exactly one outcome writer. It accepts
+`database` (the default) or `google-sheets`. The application never dual-writes;
+set it to `google-sheets` to use the retained Review API path for compatibility
+or rollback testing.
 
 `RTQ_REVIEWER` sets the short reviewer identity sent with outcomes and recorded
 with comments; it defaults to `ap` and accepts letters, numbers, dots,
@@ -89,8 +96,8 @@ the browser and does not read TOML or contact Google Sheets.
   combined review-panel preferences migrate to the two switches.
 - Use the persistent **Simple review** switch to choose between the two-action
   **Approved**/**Reset** controls and the advanced set of review outcomes.
-  Approved submits `PRG`; Reset clears only the Google Sheets outcome cell and
-  never removes SQLite feedback.
+  Approved submits `PRG`; Reset clears only the state-scoped outcome in the
+  configured destination and never removes SQLite feedback.
 - Rendered workings follow the production RTQ hierarchy: formulas and tips use
   labelled rows, later methods have their own divider, and authored
   `WorkingSection` stages retain their titles and connected side rail. Hidden
@@ -108,12 +115,13 @@ the browser and does not read TOML or contact Google Sheets.
 
 ## Review persistence
 
-Question and answer outcomes are submitted to Google Sheets through the local
-`review-api`; the UI labels successful submissions as such and keeps the new
-outcome visible for the current browser session. Canonical TOML remains the
-cross-reload outcome source after the existing Sheets synchronization runs. An
-outcome reset is sent as an explicit empty RAG value after the usual Review API
-identity, sheet, and content-state validation.
+Question and answer outcomes use the exclusive destination selected by
+`RTQ_REVIEW_OUTCOME_DESTINATION`. In the default `database` mode, they are
+stored by UUID, side, and current canonical RAG state in the shared review
+store; a reload displays only an exact current-state match. Reset clears only
+that match. In `google-sheets` mode, the existing local `review-api` forwarding,
+sheet routing, and TOML-backed display remain unchanged. Both modes retain the
+same live identity and content-state validation before writing.
 
 Comments never call `review-api`. They are appended through Drizzle to
 `<rtq-review>/database/review-content.sqlite`. Every question, subquestion, and

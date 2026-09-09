@@ -38,6 +38,12 @@ export const REVIEW_SHEET_CODES = [
 
 export type ReviewOutcome = (typeof REVIEW_OUTCOMES)[number];
 export type ReviewOutcomeSelection = ReviewOutcome | null;
+export type ReviewOutcomeDestination = 'database' | 'google-sheets';
+export type ReviewOutcomeLoad = Readonly<{
+  destination: ReviewOutcomeDestination;
+  error?: string;
+  outcomes: Readonly<Record<string, ReviewOutcomeSelection>>;
+}>;
 export type ReviewSheetCode = (typeof REVIEW_SHEET_CODES)[number];
 export type ReviewTargetDescriptor = Readonly<{
   collectionId: string;
