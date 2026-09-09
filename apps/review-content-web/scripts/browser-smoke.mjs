@@ -83,7 +83,7 @@ assert.match(positive.text, /1<!-- --> \/ <!-- -->4<!-- --> matching/);
 assert.match(positive.text, /question-node--active/);
 
 const independentStates = await read(
-  `${paperPath}?question-rag=rag_wf_pr&answer-rag=rag_wf_notstarted`,
+  `${paperPath}?question-rag=rag_wf_g0&answer-rag=rag_wf_notstarted`,
 );
 assert.match(independentStates.text, /1<!-- --> \/ <!-- -->1<!-- --> matching/);
 assert.match(independentStates.text, /S1 Q21/);

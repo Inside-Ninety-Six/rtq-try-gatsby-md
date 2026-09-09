@@ -15,6 +15,13 @@
       "when": 1788691290710,
       "tag": "0001_premium_snowbird",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788957447992,
+      "tag": "0002_overrated_bishop",
+      "breakpoints": true
     }
   ]
 }

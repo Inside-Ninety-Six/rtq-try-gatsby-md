@@ -500,18 +500,17 @@ button {
   color: #ffffff;
 }
 
-.rag-chip--red {
+.rag-chip--review-danger {
   background: #dc2626;
   color: #ffffff;
 }
 
-.rag-chip--amber {
+.rag-chip--review-warning {
   background: #f59e0b;
   color: #111827;
 }
 
-.rag-chip--pr,
-.rag-chip--prai {
+.rag-chip--review-pending {
   background: #db2777;
   color: #ffffff;
 }
@@ -526,24 +525,14 @@ button {
   color: #052e16;
 }
 
-.rag-chip--g1 {
-  background: #bbf7d0;
-  color: #052e16;
-}
-
-.rag-chip--g2 {
-  background: #86efac;
-  color: #052e16;
-}
-
-.rag-chip--g3 {
-  background: #4ade80;
-  color: #052e16;
-}
-
-.rag-chip--g4 {
+.rag-chip--ng0 {
   background: #22c55e;
   color: #052e16;
+}
+
+.rag-chip--review-success {
+  background: #16a34a;
+  color: #ffffff;
 }
 
 .rag-chip--ng1 {
@@ -567,11 +556,6 @@ button {
 .rag-chip--ng7,
 .rag-chip--ng8 {
   background: #052e16;
-  color: #ffffff;
-}
-
-.rag-chip--green {
-  background: #047857;
   color: #ffffff;
 }
 

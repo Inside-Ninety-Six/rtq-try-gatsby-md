@@ -1,4 +1,11 @@
 import type { ReviewPaperNode } from '@rtq/review-paper-model/client';
+import type { LocalReviewComment, ReviewSide } from '@rtq/review-store/types';
+
+export type {
+  LocalReviewComment,
+  ReviewSide,
+  ReviewTargetIdentity,
+} from '@rtq/review-store/types';
 
 export const REVIEW_OUTCOMES = [
   'PRCC',
@@ -17,12 +24,8 @@ export const REVIEW_OUTCOMES = [
 
 export const REVIEW_SHEET_CODES = [
   'NS',
-  'PR',
   'G0',
-  'G1',
-  'G2',
-  'G3',
-  'G4',
+  'NG0',
   'NG1',
   'NG2',
   'NG3',
@@ -36,14 +39,6 @@ export const REVIEW_SHEET_CODES = [
 export type ReviewOutcome = (typeof REVIEW_OUTCOMES)[number];
 export type ReviewOutcomeSelection = ReviewOutcome | null;
 export type ReviewSheetCode = (typeof REVIEW_SHEET_CODES)[number];
-export type ReviewSide = 'answer' | 'question';
-
-export type ReviewTargetIdentity = Readonly<{
-  questionId: string | null;
-  side: ReviewSide;
-  uuid: string;
-}>;
-
 export type ReviewTargetDescriptor = Readonly<{
   collectionId: string;
   nodeId: string;
@@ -59,16 +54,6 @@ export type ReviewCommentTargetDescriptor = Omit<
   ReviewTargetDescriptor,
   'sheet'
 >;
-
-export type LocalReviewComment = ReviewTargetIdentity &
-  Readonly<{
-    comment: string;
-    createdAt: string;
-    id: string;
-    ragState: string;
-    reviewer: string;
-    submissionId: string;
-  }>;
 
 export type ReviewCommentLoad = Readonly<{
   comments: readonly LocalReviewComment[];
@@ -106,8 +91,7 @@ export function normalizeSourceRag(value: string): string {
 export function sheetCodeFromSourceRag(value: string): ReviewSheetCode | null {
   const state = normalizeSourceRag(value).slice('rag_wf_'.length);
   if (state === 'notstarted' || state === 'ns') return 'NS';
-  if (state === 'pr') return 'PR';
-  if (/^g[0-4]$/.test(state) || /^ng[1-8]$/.test(state)) {
+  if (state === 'g0' || /^ng[0-8]$/.test(state)) {
     const sheet = state.toUpperCase();
     return isReviewSheetCode(sheet) ? sheet : null;
   }

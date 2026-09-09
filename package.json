@@ -8,9 +8,12 @@
   },
   "scripts": {
     "docs-web:dev": "pnpm --filter rtq-docs-web dev --port 3005",
-    "format:check": "pnpm --filter rtq-review-markdown-web format:check && pnpm --filter rtq-review-content-web format:check && pnpm --filter @rtq/review-paper-model format:check && pnpm --filter @rtq/review-paper-markdown format:check && pnpm --filter @rtq/review-katex-options format:check",
+    "format:check": "pnpm --filter rtq-review-markdown-web format:check && pnpm --filter rtq-review-content-web format:check && pnpm --filter @rtq/review-paper-model format:check && pnpm --filter @rtq/review-paper-markdown format:check && pnpm --filter @rtq/review-katex-options format:check && pnpm --filter @rtq/review-store format:check",
     "lint:check": "pnpm --filter rtq-review-markdown-web lint:check && pnpm --filter rtq-review-content-web lint:check",
     "repository-paths:test": "pnpm --filter @rtq/review-repository-paths test",
+    "database:tracking:check": "pnpm --filter @rtq/review-store database:tracking:check",
+    "database:migrate": "pnpm --filter @rtq/review-store database:migrate",
+    "review-outcomes:resolve": "pnpm --silent --filter @rtq/review-store outcomes:resolve",
     "review-content-web:check": "pnpm --filter rtq-review-content-web check",
     "review-content-web:dev": "pnpm --filter rtq-review-content-web dev --port 3001",
     "review-markdown-web:dev": "pnpm --filter rtq-review-markdown-web dev --port 3004",
@@ -22,7 +25,7 @@
     "review-api:dependencies:check": "pnpm --filter rtq-review-api dependencies:check",
     "review-api:syntax:check": "pnpm --filter rtq-review-api syntax:check",
     "review-stack:smoke": "node scripts/review-stack-smoke.mjs",
-    "test": "pnpm --filter rtq-review-markdown-web test && pnpm --filter @rtq/review-paper-model test && pnpm --filter @rtq/review-paper-markdown test && pnpm --filter @rtq/review-katex-options test && pnpm --filter rtq-review-content-web test",
-    "types": "pnpm --filter rtq-review-markdown-web types && pnpm --filter @rtq/review-paper-model types && pnpm --filter @rtq/review-paper-markdown types && pnpm --filter @rtq/review-katex-options types && pnpm --filter rtq-review-content-web types"
+    "test": "pnpm --filter rtq-review-markdown-web test && pnpm --filter @rtq/review-paper-model test && pnpm --filter @rtq/review-paper-markdown test && pnpm --filter @rtq/review-katex-options test && pnpm --filter @rtq/review-store test && pnpm --filter rtq-review-content-web test",
+    "types": "pnpm --filter rtq-review-markdown-web types && pnpm --filter @rtq/review-paper-model types && pnpm --filter @rtq/review-paper-markdown types && pnpm --filter @rtq/review-katex-options types && pnpm --filter @rtq/review-store types && pnpm --filter rtq-review-content-web types"
   }
 }

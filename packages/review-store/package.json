@@ -1,0 +1,32 @@
+{
+  "name": "@rtq/review-store",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./server": "./src/index.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "database:tracking:check": "node scripts/database-tracking-check.mjs",
+    "database:migrate": "node --no-warnings --experimental-strip-types src/migrate-database.ts",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "format:check": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "outcomes:resolve": "node --no-warnings --experimental-strip-types src/resolve-review-outcomes-cli.ts",
+    "test": "node --no-warnings --test --experimental-strip-types src/review-store.test.ts src/review-outcome-resolution.test.ts",
+    "types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rtq/review-repository-paths": "workspace:*",
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^20",
+    "drizzle-kit": "^0.31.10",
+    "prettier": "^3.8.0",
+    "typescript": "^5"
+  }
+}

@@ -47,9 +47,12 @@ test('normalizes source states and derives only supported sheet routes', () => {
   assert.equal(normalizeSourceRag('NG-4'), 'rag_wf_ng4');
   assert.equal(normalizeSourceRag('rag_wf_notstarted'), 'rag_wf_notstarted');
   assert.equal(sheetCodeFromSourceRag('rag_wf_notstarted'), 'NS');
-  assert.equal(sheetCodeFromSourceRag('RAG_WF_PR'), 'PR');
+  assert.equal(sheetCodeFromSourceRag('RAG_WF_G0'), 'G0');
+  assert.equal(sheetCodeFromSourceRag('rag_wf_ng0'), 'NG0');
   assert.equal(sheetCodeFromSourceRag('rag_wf_ng8'), 'NG8');
   assert.equal(sheetCodeFromSourceRag('rag_wf_blocked'), null);
+  assert.equal(sheetCodeFromSourceRag('rag_wf_g4'), null);
+  assert.equal(sheetCodeFromSourceRag('rag_wf_green'), null);
 });
 
 test('partitions current and historical comments by exact side and state', () => {
@@ -136,7 +139,7 @@ test('uses each nested node UUID and only inherits RAG from its top-level questi
   const topLevel = {
     depth: 0,
     review: {
-      answer: { contentRag: 'rag_wf_g2' },
+      answer: { contentRag: 'rag_wf_g0' },
       question: { contentRag: 'rag_wf_ng3' },
     },
     uuid: 'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA',
@@ -166,7 +169,7 @@ test('uses each nested node UUID and only inherits RAG from its top-level questi
   assert.equal(questionTarget?.questionId, null);
   assert.equal(questionTarget?.ragState, 'rag_wf_ng3');
   assert.equal(answerTarget?.uuid, nested.uuid);
-  assert.equal(answerTarget?.ragState, 'rag_wf_g2');
+  assert.equal(answerTarget?.ragState, 'rag_wf_g0');
   assert.equal(questionTarget?.sheet, null);
 });
 
@@ -190,7 +193,7 @@ test('recursively resolves a nested comment target within its top-level RAG cont
     depth: 0,
     id: 's0.q0',
     review: {
-      answer: { contentRag: 'rag_wf_g2' },
+      answer: { contentRag: 'rag_wf_g0' },
       question: { contentRag: 'rag_wf_ng3' },
     },
     uuid: 'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA',

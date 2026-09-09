@@ -24,15 +24,10 @@ export type RagState = {
   label: string;
   rawValue: string;
   tone:
-    | 'amber'
     | 'blocked'
     | 'comingsoon'
     | 'g0'
-    | 'g1'
-    | 'g2'
-    | 'g3'
-    | 'g4'
-    | 'green'
+    | 'ng0'
     | 'ng1'
     | 'ng2'
     | 'ng3'
@@ -42,9 +37,10 @@ export type RagState = {
     | 'ng7'
     | 'ng8'
     | 'notstarted'
-    | 'pr'
-    | 'prai'
-    | 'red'
+    | 'review-danger'
+    | 'review-pending'
+    | 'review-success'
+    | 'review-warning'
     | 'unknown';
   value: string;
 };

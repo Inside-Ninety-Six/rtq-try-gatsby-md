@@ -82,12 +82,9 @@ importers:
       '@rtq/review-repository-paths':
         specifier: workspace:*
         version: link:../../packages/repository-paths
-      better-sqlite3:
-        specifier: ^13.0.3
-        version: 13.0.3
-      drizzle-orm:
-        specifier: ^0.45.2
-        version: 0.45.2(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
+      '@rtq/review-store':
+        specifier: workspace:*
+        version: link:../../packages/review-store
       katex:
         specifier: ^0.17.0
         version: 0.17.0
@@ -113,9 +110,6 @@ importers:
         specifier: ^6.0.0
         version: 6.0.0
     devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^9.6.0
-        version: 9.6.0
       '@types/node':
         specifier: ^20
         version: 20.19.43
@@ -125,9 +119,6 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.2.7(@types/react@19.2.18)
-      drizzle-kit:
-        specifier: ^0.31.10
-        version: 0.31.10
       eslint:
         specifier: ^9
         version: 9.39.5(jiti@2.7.0)
@@ -543,6 +534,34 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.19.43
+      prettier:
+        specifier: ^3.8.0
+        version: 3.9.6
+      typescript:
+        specifier: ^5
+        version: 5.4.2
+
+  packages/review-store:
+    dependencies:
+      '@rtq/review-repository-paths':
+        specifier: workspace:*
+        version: link:../repository-paths
+      better-sqlite3:
+        specifier: ^13.0.3
+        version: 13.0.3
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^9.6.0
+        version: 9.6.0
+      '@types/node':
+        specifier: ^20
+        version: 20.19.43
+      drizzle-kit:
+        specifier: ^0.31.10
+        version: 0.31.10
       prettier:
         specifier: ^3.8.0
         version: 3.9.6
@@ -5813,11 +5832,6 @@ packages:
 
   fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
-
-  fsevents@2.3.2:
-    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
-    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
-    os: [darwin]
 
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
@@ -14471,7 +14485,7 @@ snapshots:
       normalize-path: 3.0.0
       readdirp: 3.6.0
     optionalDependencies:
-      fsevents: 2.3.2
+      fsevents: 2.3.3
 
   chokidar@5.0.0:
     dependencies:
@@ -16339,9 +16353,6 @@ snapshots:
   fs-monkey@1.0.3: {}
 
   fs.realpath@1.0.0: {}
-
-  fsevents@2.3.2:
-    optional: true
 
   fsevents@2.3.3:
     optional: true

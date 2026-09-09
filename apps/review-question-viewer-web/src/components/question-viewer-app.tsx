@@ -156,14 +156,14 @@ function tagDimensionClass(tag: string) {
 function reviewTone(value: string): RagState['tone'] {
   const normalized = value.trim().toLowerCase();
 
-  if (normalized === 'pr' || normalized === 'pra') return 'pr';
+  if (normalized === 'pr' || normalized === 'pra') return 'review-pending';
   if (normalized === 'prcs') return 'comingsoon';
-  if (normalized === 'prr') return 'red';
+  if (normalized === 'prr') return 'review-danger';
   if (normalized === 'prbd') return 'blocked';
-  if (normalized === 'prg' || normalized === 'prg2') return 'green';
+  if (normalized === 'prg' || normalized === 'prg2') return 'review-success';
   if (normalized === 'prcr' || normalized === 'prpcr' || normalized === 'prrl')
-    return 'amber';
-  if (normalized === 'prcc' || normalized === 'prpcc') return 'g2';
+    return 'review-warning';
+  if (normalized === 'prcc' || normalized === 'prpcc') return 'review-success';
   return 'unknown';
 }
 

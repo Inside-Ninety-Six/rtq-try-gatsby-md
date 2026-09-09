@@ -54,13 +54,9 @@ configure do
 
   all_toml_rags = [
     "NS",
-    "PR",
     "OPR",
     "G0",
-    "G1",
-    "G2",
-    "G3",
-    "G4",
+    "NG0",
     "NG1",
     "NG2",
     "NG3",
@@ -73,12 +69,8 @@ configure do
 
   all_sheets = [
     "NS",
-    "PR",
     "G0",
-    "G1",
-    "G2",
-    "G3",
-    "G4",
+    "NG0",
     "NG1",
     "NG2",
     "NG3",

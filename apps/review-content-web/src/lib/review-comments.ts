@@ -1,11 +1,10 @@
 import type { ReviewPaper, ReviewPaperNode } from '@rtq/review-paper-model';
-
 import {
-  getReviewCommentRepository,
+  getReviewStore,
   ReviewCommentConflictError,
   ReviewDatabaseError,
   type ReviewCommentRepository,
-} from '../db/review-comments.ts';
+} from '@rtq/review-store/server';
 
 import {
   resolveVerifiedReviewCommentTarget,
@@ -64,7 +63,7 @@ export function loadReviewCommentsForPaper(
 ): ReviewCommentLoad {
   try {
     return {
-      comments: getReviewCommentRepository().listForTargets(
+      comments: getReviewStore().comments.listForTargets(
         reviewCommentIdentitiesForPaper(paper),
       ),
     };
@@ -72,7 +71,7 @@ export function loadReviewCommentsForPaper(
     return {
       comments: [],
       error:
-        'Local comments are unavailable. Check the rtq-content database directory and retry.',
+        'Local comments are unavailable. Check the rtq-review database directory and retry.',
     };
   }
 }
@@ -92,7 +91,7 @@ export async function appendVerifiedReviewComment(
     dependencies.resolveTarget ?? resolveVerifiedReviewCommentTarget;
   const target = await resolveTarget(input.target);
   try {
-    const repository = dependencies.repository ?? getReviewCommentRepository();
+    const repository = dependencies.repository ?? getReviewStore().comments;
     return repository.append({
       comment: input.comment,
       questionId: target.questionId,

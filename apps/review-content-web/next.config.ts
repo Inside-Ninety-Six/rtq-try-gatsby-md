@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
-    '/*': ['./drizzle/**/*'],
+    '/*': ['../../packages/review-store/drizzle/**/*'],
   },
   serverExternalPackages: ['better-sqlite3'],
 };

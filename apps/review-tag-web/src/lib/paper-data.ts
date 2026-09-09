@@ -229,12 +229,8 @@ function statusToneFor(value: string | null): StatusTone | null {
       return 'statusGray';
     case 'blocked':
       return 'statusBlocked';
-    case 'red':
-      return 'statusRed';
-    case 'pr':
-      return 'statusAmber';
     case 'g0':
-    case 'g1':
+    case 'ng0':
       return 'statusGreen1';
     case 'ng1':
       return 'statusGreen1';

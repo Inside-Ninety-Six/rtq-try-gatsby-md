@@ -124,6 +124,6 @@ test('paper routes encode collection and every source-relative segment', () => {
 
 test('rack states have compact reviewer-facing labels', () => {
   assert.equal(reviewStateLabel('rag_wf_ng4'), 'NG4');
-  assert.equal(reviewStateLabel('rag_g2'), 'G2');
+  assert.equal(reviewStateLabel('rag_ng2'), 'NG2');
   assert.equal(reviewStateLabel('editorial_hold'), 'EDITORIAL HOLD');
 });

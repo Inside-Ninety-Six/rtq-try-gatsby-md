@@ -487,15 +487,10 @@ function ragStateFromValue(value: string) {
 function ragTone(value: string): RagState['tone'] {
   const state = ragStateFromValue(value);
   const validStates = new Set<RagState['tone']>([
-    'amber',
     'blocked',
     'comingsoon',
     'g0',
-    'g1',
-    'g2',
-    'g3',
-    'g4',
-    'green',
+    'ng0',
     'ng1',
     'ng2',
     'ng3',
@@ -505,9 +500,6 @@ function ragTone(value: string): RagState['tone'] {
     'ng7',
     'ng8',
     'notstarted',
-    'pr',
-    'prai',
-    'red',
   ]);
 
   return validStates.has(state as RagState['tone'])
@@ -546,11 +538,7 @@ function sheetCodeFromRag(value: string | null | undefined) {
     return 'NS';
   }
 
-  if (state === 'pr') {
-    return 'PR';
-  }
-
-  if (/^g[0-4]$/.test(state) || /^ng[1-8]$/.test(state)) {
+  if (state === 'g0' || /^ng[0-8]$/.test(state)) {
     return state.toUpperCase();
   }
 
