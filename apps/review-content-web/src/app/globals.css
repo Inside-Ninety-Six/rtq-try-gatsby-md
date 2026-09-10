@@ -15,6 +15,21 @@
   --gold: #8a6116;
   --violet: #694f7c;
   --feedback-background: #fff3f2;
+  --review-approved-background: #16724b;
+  --review-approved-border: #105c3c;
+  --review-approved-foreground: #ffffff;
+  --review-change-requested-background: #f6d889;
+  --review-change-requested-border: #c79218;
+  --review-change-requested-foreground: #3f2d00;
+  --review-change-complete-background: #d9eaf7;
+  --review-change-complete-border: #5084a8;
+  --review-change-complete-foreground: #16384f;
+  --review-blocked-background: #f4d4cf;
+  --review-blocked-border: #b54c3e;
+  --review-blocked-foreground: #68271f;
+  --review-coming-soon-background: #fff1b8;
+  --review-coming-soon-border: #c69b14;
+  --review-coming-soon-foreground: #4b3900;
   --shadow: 0 4px 14px rgba(32, 36, 40, 0.06);
 }
 
@@ -126,7 +141,9 @@ p {
   align-items: center;
   color: var(--muted);
   display: flex;
+  flex-wrap: wrap;
   gap: 0.55rem;
+  justify-content: flex-end;
 }
 
 .read-only-dot {
@@ -638,12 +655,21 @@ a.paper-row:hover {
   color: var(--ink);
   margin-top: 2rem;
   padding: clamp(1rem, 2vw, 1.5rem);
+  scroll-margin-top: 5.5rem;
 }
 
 .filter-heading {
   align-items: end;
   display: flex;
   justify-content: space-between;
+}
+
+.filter-heading-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  justify-content: flex-end;
 }
 
 .filter-heading h2 {
@@ -739,6 +765,52 @@ a.paper-row:hover {
 .state-options label:has(input:checked) {
   background: var(--signal-soft);
   border-color: var(--signal);
+}
+
+.review-outcome-options label:has(input:checked) {
+  background: var(--review-option-background, var(--signal-soft));
+  border-color: var(--review-option-border, var(--signal));
+  color: var(--review-option-foreground, var(--ink));
+}
+
+.review-outcome-option--approved,
+.review-activity-badge--approved,
+.outcome-action--approved {
+  --review-option-background: var(--review-approved-background);
+  --review-option-border: var(--review-approved-border);
+  --review-option-foreground: var(--review-approved-foreground);
+}
+
+.review-outcome-option--change-requested,
+.review-activity-badge--change-requested,
+.outcome-action--change-requested {
+  --review-option-background: var(--review-change-requested-background);
+  --review-option-border: var(--review-change-requested-border);
+  --review-option-foreground: var(--review-change-requested-foreground);
+}
+
+.review-outcome-option--change-complete,
+.review-activity-badge--change-complete,
+.outcome-action--change-complete {
+  --review-option-background: var(--review-change-complete-background);
+  --review-option-border: var(--review-change-complete-border);
+  --review-option-foreground: var(--review-change-complete-foreground);
+}
+
+.review-outcome-option--blocked,
+.review-activity-badge--blocked,
+.outcome-action--blocked {
+  --review-option-background: var(--review-blocked-background);
+  --review-option-border: var(--review-blocked-border);
+  --review-option-foreground: var(--review-blocked-foreground);
+}
+
+.review-outcome-option--coming-soon,
+.review-activity-badge--coming-soon,
+.outcome-action--coming-soon {
+  --review-option-background: var(--review-coming-soon-background);
+  --review-option-border: var(--review-coming-soon-border);
+  --review-option-foreground: var(--review-coming-soon-foreground);
 }
 
 .state-options input,
@@ -845,6 +917,31 @@ a.paper-row:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 1rem;
+}
+
+.toolbar-filter-button {
+  align-items: center;
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  color: var(--paper-bright);
+  cursor: pointer;
+  display: flex;
+  flex: none;
+  font-weight: 800;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0.6rem 0.75rem;
+}
+
+.toolbar-filter-button strong {
+  background: var(--paper-bright);
+  border-radius: 999px;
+  color: var(--ink);
+  display: grid;
+  font-size: 0.875rem;
+  min-height: 1.5rem;
+  min-width: 1.5rem;
+  place-items: center;
 }
 
 .review-toolbar-group--mode,
@@ -1129,6 +1226,47 @@ a.paper-row:hover {
   gap: 1rem;
   justify-content: space-between;
   padding-bottom: 1rem;
+}
+
+.question-heading-main {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.question-review-activity,
+.question-review-activity-side {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.question-review-activity-side {
+  align-items: center;
+}
+
+.review-activity-badge,
+.review-feedback-badge {
+  border: 1px solid var(--review-option-border, var(--rule-strong));
+  color: var(--review-option-foreground, var(--ink));
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.875rem;
+  font-weight: 750;
+  line-height: 1.35;
+  padding: 0.3rem 0.45rem;
+}
+
+.review-activity-badge {
+  background: var(--review-option-background, var(--paper-deep));
+}
+
+.review-feedback-badge {
+  background: var(--paper-deep);
+}
+
+.review-feedback-badge--history {
+  border-style: dashed;
+  color: var(--muted);
 }
 
 .question-label > span {
@@ -1743,33 +1881,33 @@ a.paper-row:hover {
 }
 
 .outcome-action--approved {
-  background: var(--ready);
-  border-color: var(--ready) !important;
-  color: white;
+  background: var(--review-option-background);
+  border-color: var(--review-option-border) !important;
+  color: var(--review-option-foreground);
 }
 
 .outcome-action--change-requested {
-  background: #f6d889;
-  border-color: #c79218 !important;
-  color: #3f2d00;
+  background: var(--review-option-background);
+  border-color: var(--review-option-border) !important;
+  color: var(--review-option-foreground);
 }
 
 .outcome-action--change-complete {
-  background: #d9eaf7;
-  border-color: #5084a8 !important;
-  color: #16384f;
+  background: var(--review-option-background);
+  border-color: var(--review-option-border) !important;
+  color: var(--review-option-foreground);
 }
 
 .outcome-action--blocked {
-  background: #f4d4cf;
-  border-color: #b54c3e !important;
-  color: #68271f;
+  background: var(--review-option-background);
+  border-color: var(--review-option-border) !important;
+  color: var(--review-option-foreground);
 }
 
 .outcome-action--coming-soon {
-  background: #fff1b8;
-  border-color: #c69b14 !important;
-  color: #4b3900;
+  background: var(--review-option-background);
+  border-color: var(--review-option-border) !important;
+  color: var(--review-option-foreground);
 }
 
 .outcome-action--reset {
@@ -2418,27 +2556,34 @@ a.paper-row:hover {
   }
 
   .review-toolbar {
-    position: static;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    position: sticky;
   }
 
   .review-toolbar-group {
     gap: 0.75rem;
+    flex: none;
+    flex-wrap: nowrap;
   }
 
   .review-toolbar-group--feedback {
-    border-left: 0;
-    margin-left: 0;
-    padding-left: 0;
+    border-left: 1px solid var(--rule);
+    padding-left: 1rem;
   }
 
   .review-toolbar-group--mode {
-    border-left: 0;
     margin-left: 0;
-    padding-left: 0;
+    padding-left: 1rem;
   }
 
   .toolbar-label {
-    flex-basis: 100%;
+    flex-basis: auto;
+  }
+
+  .preference-toggle {
+    flex: none;
   }
 
   .question-heading {

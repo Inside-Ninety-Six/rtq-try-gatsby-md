@@ -6,6 +6,7 @@ import {
   clearAllReviewFilters,
   clearDimensionalFilter,
   filterReviewPaper,
+  REVIEW_OUTCOME_FILTER_VALUES,
   parseDimensionalFilterSearchParams,
   parseReviewFilterSearchParams,
   resolveReviewPaperTags,
@@ -13,6 +14,7 @@ import {
   serializeReviewFilterSearchParams,
   type DimensionalTagAxis,
   type ReviewContentField,
+  type ReviewOutcomeFilterContext,
   type ReviewPaper,
   type ReviewPaperNode,
 } from './index.ts';
@@ -405,6 +407,123 @@ test('cross-filters question and answer state counts and retains zero selections
   );
 });
 
+const outcomeContext: ReviewOutcomeFilterContext = {
+  values: {
+    's0.q0': { answer: 'PRCR', question: 'PRG' },
+    's0.q1': { answer: null, question: 'PRCC' },
+    's0.q2': { answer: 'PRG', question: null },
+  },
+};
+
+test('filters exact top-level question and answer review outcomes independently', () => {
+  const paper = filterFixture();
+
+  assert.deepEqual(
+    filterReviewPaper(paper, { questionReview: ['PRG'] }, outcomeContext)
+      .matchingQuestionTreeIds,
+    ['s0.q0'],
+  );
+  assert.deepEqual(
+    filterReviewPaper(paper, { answerReview: ['PRG'] }, outcomeContext)
+      .matchingQuestionTreeIds,
+    ['s0.q2'],
+  );
+  assert.deepEqual(
+    filterReviewPaper(
+      paper,
+      { answerReview: ['PRCR'], questionReview: ['PRG'] },
+      outcomeContext,
+    ).matchingQuestionTreeIds,
+    ['s0.q0'],
+  );
+  assert.deepEqual(
+    filterReviewPaper(
+      paper,
+      { questionReview: ['PRG', 'PRCC'] },
+      outcomeContext,
+    ).matchingQuestionTreeIds,
+    ['s0.q0', 's0.q1'],
+  );
+});
+
+test('maps a missing exact outcome to the canonical pending filter', () => {
+  const paper = filterFixture();
+
+  assert.deepEqual(
+    filterReviewPaper(paper, { questionReview: ['PRNS'] }, outcomeContext)
+      .matchingQuestionTreeIds,
+    ['s0.q2'],
+  );
+  assert.deepEqual(REVIEW_OUTCOME_FILTER_VALUES, [
+    'PRNS',
+    'PRG',
+    'PRCR',
+    'PRCC',
+    'PRBD',
+    'PRCS',
+  ]);
+  assert.deepEqual(
+    filterReviewPaper(
+      paper,
+      { questionReview: ['PRNS'] },
+      {
+        values: {
+          ...outcomeContext.values,
+          's0.q2': { answer: 'PRG', question: 'PRNS' },
+        },
+      },
+    ).matchingQuestionTreeIds,
+    ['s0.q2'],
+  );
+});
+
+test('cross-filters review outcomes with content state and dimensions', () => {
+  const result = filterReviewPaper(
+    filterFixture(),
+    {
+      answerReview: ['PRCR'],
+      frame: ['frame.columnar'],
+      math: ['math.number.fraction'],
+      questionReview: ['PRG'],
+    },
+    outcomeContext,
+  );
+
+  assert.deepEqual(result.matchingQuestionTreeIds, ['s0.q0']);
+  assert.deepEqual(result.matchingNodeIds, ['s0.q0.sq0']);
+  assert.deepEqual(
+    result.reviewOutcomeFacets.map((facet) => facet.side),
+    ['question', 'answer'],
+  );
+  assert.equal(
+    result.reviewOutcomeFacets[0].options.find(
+      (option) => option.value === 'PRCC',
+    )?.count,
+    0,
+  );
+  assert.equal(
+    result.reviewOutcomeFacets[1].options.find(
+      (option) => option.value === 'PRCR',
+    )?.count,
+    1,
+  );
+  assert.equal(
+    result.reviewOutcomeFacets[1].options.find(
+      (option) => option.value === 'PRG',
+    )?.count,
+    0,
+  );
+});
+
+test('does not classify unavailable review data as pending', () => {
+  const result = filterReviewPaper(filterFixture(), {
+    questionReview: ['PRNS'],
+  });
+
+  assert.equal(result.reviewOutcomeFacets.length, 0);
+  assert.equal(result.matchingQuestionTreeCount, 3);
+});
+
 test('round-trips stable repeated URL parameters and clears dimensions', () => {
   const parsed = parseDimensionalFilterSearchParams(
     '?math=math.ratio&view=raw&math=math.number.fraction&math=math.ratio&family=math.invalid&marker=marker.fill+missing',
@@ -438,16 +557,18 @@ test('round-trips stable repeated URL parameters and clears dimensions', () => {
 
 test('round-trips state and dimensional filters and clears the complete lens', () => {
   const parsed = parseReviewFilterSearchParams(
-    '?question-rag=rag_wf_ng4&math=math.number.fraction&answer-rag=rag_wf_g3&question=q-3&answer-rag=rag_wf_g2&question-rag=rag_wf_ng4',
+    '?question-rag=rag_wf_ng4&math=math.number.fraction&answer-rag=rag_wf_g3&question=q-3&answer-rag=rag_wf_g2&question-rag=rag_wf_ng4&question-review=PRCR&answer-review=PRCC',
   );
 
   assert.deepEqual(parsed, {
     answerRag: ['rag_wf_g2', 'rag_wf_g3'],
+    answerReview: ['PRCC'],
     family: [],
     frame: [],
     marker: [],
     math: ['math.number.fraction'],
     questionRag: ['rag_wf_ng4'],
+    questionReview: ['PRCR'],
     reasoning: [],
   });
   const serialized = serializeReviewFilterSearchParams(
@@ -456,16 +577,18 @@ test('round-trips state and dimensional filters and clears the complete lens', (
   );
   assert.equal(
     serialized,
-    'answer-rag=rag_wf_g2&answer-rag=rag_wf_g3&math=math.number.fraction&question=q-3&question-rag=rag_wf_ng4&view=raw',
+    'answer-rag=rag_wf_g2&answer-rag=rag_wf_g3&answer-review=PRCC&math=math.number.fraction&question=q-3&question-rag=rag_wf_ng4&question-review=PRCR&view=raw',
   );
   assert.deepEqual(parseReviewFilterSearchParams(serialized), parsed);
   assert.deepEqual(clearAllReviewFilters(), {
     answerRag: [],
+    answerReview: [],
     family: [],
     frame: [],
     marker: [],
     math: [],
     questionRag: [],
+    questionReview: [],
     reasoning: [],
   });
 });

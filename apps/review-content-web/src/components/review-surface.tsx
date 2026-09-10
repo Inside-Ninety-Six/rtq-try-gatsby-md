@@ -44,12 +44,15 @@ import {
 import {
   REVIEW_OUTCOME_OPTIONS,
   SIMPLE_REVIEW_OUTCOME_OPTIONS,
+  displayedReviewOutcome,
   isReviewOutcome,
   partitionReviewComments,
   reviewCommentTargetForNode,
   reviewTargetForNode,
   reviewTargetKey,
   reviewOutcomeLabel,
+  reviewOutcomeFilterLabel,
+  reviewOutcomeTone,
   runUniqueReviewRequest,
   type LocalReviewComment,
   type ReviewCommentLoad,
@@ -249,15 +252,13 @@ function ReviewScope({
     : { current: [], history: [] };
   const hasFeedback =
     commentGroups.current.length > 0 || commentGroups.history.length > 0;
-  const sourceOutcome = node.review[side].reviewOutcome;
-  const authoredOutcome = isReviewOutcome(sourceOutcome)
-    ? sourceOutcome
-    : undefined;
-  const displayedOutcome = Object.hasOwn(runtime.outcomeOverrides, key)
-    ? runtime.outcomeOverrides[key]
-    : runtime.outcomeDestination === 'google-sheets'
-      ? authoredOutcome
-      : undefined;
+  const displayedOutcome = displayedReviewOutcome(
+    node,
+    side,
+    runtime.source,
+    runtime.outcomeDestination,
+    runtime.outcomeOverrides,
+  );
   const outcomeDisabledReason = !target
     ? targetUnavailableReason(node, topLevelQuestion, side)
     : runtime.outcomeError
@@ -372,7 +373,7 @@ function ReviewScope({
                   title={outcomeDisabledReason}
                   type="button"
                 >
-                  {option.label}
+                  {option.actionLabel}
                 </button>
               ))}
               <button
@@ -401,7 +402,7 @@ function ReviewScope({
                   title={outcomeDisabledReason}
                   type="button"
                 >
-                  {option.label}
+                  {option.actionLabel}
                 </button>
               ))}
               <button
@@ -518,11 +519,9 @@ function ReviewPanel({
     >
       <div className="review-panel-heading">
         <span>{outcomesEnabled ? 'Review workflow' : 'Node feedback'}</span>
-        <span>
-          {outcomesEnabled
-            ? 'Outcomes → Sheets · comments → local SQLite'
-            : `Own UUID · RAG inherited from ${topLevelQuestion.label}`}
-        </span>
+        {!outcomesEnabled ? (
+          <span>{`Own UUID · RAG inherited from ${topLevelQuestion.label}`}</span>
+        ) : null}
       </div>
       <div className="review-scopes" data-visible-sides={visibleSides.length}>
         {visibleSides.map((side) => (
@@ -831,9 +830,14 @@ function QuestionNode({
       tabIndex={node.depth === 0 ? 0 : -1}
     >
       <header className="question-heading">
-        <div className="question-label">
-          <span>{node.kind.replaceAll('-', ' ')}</span>
-          <h3>{node.label}</h3>
+        <div className="question-heading-main">
+          <div className="question-label">
+            <span>{node.kind.replaceAll('-', ' ')}</span>
+            <h3>{node.label}</h3>
+          </div>
+          {node.depth === 0 ? (
+            <QuestionReviewActivity node={node} runtime={reviewRuntime} />
+          ) : null}
         </div>
         <div className="question-identifiers">
           {node.uuid ? <code>UUID {node.uuid}</code> : null}
@@ -881,6 +885,69 @@ function QuestionNode({
   );
 }
 
+function QuestionReviewActivity({
+  node,
+  runtime,
+}: {
+  node: DisplayPaperNode;
+  runtime: ReviewRuntimeState;
+}) {
+  const activity = (['question', 'answer'] as const).flatMap((side) => {
+    const target = reviewTargetForNode(node, side, runtime.source);
+    if (!target) return [];
+    const outcome = displayedReviewOutcome(
+      node,
+      side,
+      runtime.source,
+      runtime.outcomeDestination,
+      runtime.outcomeOverrides,
+    );
+    const commentGroups = partitionReviewComments(runtime.comments, target);
+    if (
+      !outcome &&
+      commentGroups.current.length === 0 &&
+      (!runtime.showPreviousFeedback || commentGroups.history.length === 0)
+    ) {
+      return [];
+    }
+    return [{ commentGroups, outcome, side }];
+  });
+  if (activity.length === 0) return null;
+
+  return (
+    <div
+      className="question-review-activity"
+      aria-label="Current review activity"
+      aria-live="polite"
+    >
+      {activity.map(({ commentGroups, outcome, side }) => (
+        <div className="question-review-activity-side" key={side}>
+          {outcome ? (
+            <span
+              className={`review-activity-badge review-activity-badge--${reviewOutcomeTone(outcome)}`}
+            >
+              {side === 'question' ? 'Question' : 'Answer'} ·{' '}
+              {reviewOutcomeLabel(outcome)}
+            </span>
+          ) : null}
+          {commentGroups.current.length > 0 ? (
+            <span className="review-feedback-badge">
+              {side === 'question' ? 'Question' : 'Answer'} feedback ·{' '}
+              {commentGroups.current.length}
+            </span>
+          ) : null}
+          {runtime.showPreviousFeedback && commentGroups.history.length > 0 ? (
+            <span className="review-feedback-badge review-feedback-badge--history">
+              {side === 'question' ? 'Question' : 'Answer'} previous ·{' '}
+              {commentGroups.history.length}
+            </span>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function PreferenceToggle({
   checked,
   label,
@@ -911,6 +978,10 @@ function FilterPanel({
   onClear,
   onToggle,
   onToggleState,
+  onReturnToQuestion,
+  reviewOutcomeError,
+  reviewOutcomeFacets,
+  returnQuestionLabel,
   selection,
   stateFacets,
 }: {
@@ -918,9 +989,15 @@ function FilterPanel({
   onClear: () => void;
   onToggle: (axis: DimensionalTagAxis, value: string) => void;
   onToggleState: (
-    parameter: 'answerRag' | 'questionRag',
+    parameter: 'answerRag' | 'answerReview' | 'questionRag' | 'questionReview',
     value: string,
   ) => void;
+  onReturnToQuestion?: () => void;
+  reviewOutcomeError?: string;
+  reviewOutcomeFacets: ReturnType<
+    typeof filterReviewPaper
+  >['reviewOutcomeFacets'];
+  returnQuestionLabel?: string;
   selection: ReviewFilterSelection;
   stateFacets: ReturnType<typeof filterReviewPaper>['stateFacets'];
 }) {
@@ -930,17 +1007,81 @@ function FilterPanel({
       0,
     ) +
     selection.questionRag.length +
-    selection.answerRag.length;
+    selection.answerRag.length +
+    selection.questionReview.length +
+    selection.answerReview.length;
   return (
-    <section className="filter-panel" aria-labelledby="filter-title">
+    <section
+      className="filter-panel"
+      aria-labelledby="filter-title"
+      id="review-filters"
+      tabIndex={-1}
+    >
       <div className="filter-heading">
         <div>
           <p className="eyebrow">Runtime lens</p>
           <h2 id="filter-title">Review filters</h2>
         </div>
-        <button disabled={selectedCount === 0} onClick={onClear} type="button">
-          Clear all {selectedCount ? `(${selectedCount})` : ''}
-        </button>
+        <div className="filter-heading-actions">
+          {onReturnToQuestion ? (
+            <button onClick={onReturnToQuestion} type="button">
+              Back to {returnQuestionLabel ?? 'current question'}
+            </button>
+          ) : null}
+          <button
+            disabled={selectedCount === 0}
+            onClick={onClear}
+            type="button"
+          >
+            Clear all {selectedCount ? `(${selectedCount})` : ''}
+          </button>
+        </div>
+      </div>
+      <div className="state-filter-band review-outcome-filter-band">
+        <div className="state-filter-intro">
+          <strong>Peer-review outcome</strong>
+          <span>
+            Current requests for the exact question and answer RAG states.
+          </span>
+        </div>
+        {reviewOutcomeError ? (
+          <p className="review-unavailable" role="status">
+            Review outcome filters are unavailable: {reviewOutcomeError}
+          </p>
+        ) : (
+          reviewOutcomeFacets.map((facet) => (
+            <fieldset
+              className={`state-facet state-facet--${facet.side}`}
+              key={facet.side}
+            >
+              <legend>{facet.label}</legend>
+              <div className="state-options review-outcome-options">
+                {facet.options.map((option) => (
+                  <label
+                    className={`${
+                      isReviewOutcome(option.value)
+                        ? `review-outcome-option--${reviewOutcomeTone(option.value)}`
+                        : ''
+                    }${option.disabled ? ' facet-option--disabled' : ''}`}
+                    key={option.value}
+                    title={option.value}
+                  >
+                    <input
+                      checked={option.selected}
+                      disabled={option.disabled}
+                      onChange={() =>
+                        onToggleState(facet.parameter, option.value)
+                      }
+                      type="checkbox"
+                    />
+                    <span>{reviewOutcomeFilterLabel(option.value)}</span>
+                    <strong>{option.count}</strong>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ))
+        )}
       </div>
       <div className="state-filter-band">
         <div className="state-filter-intro">
@@ -1197,6 +1338,9 @@ export function ReviewSurface({
     commentLoad.comments,
   );
   const [showPreviousFeedback, setShowPreviousFeedback] = useState(false);
+  const [filterReturnQuestionId, setFilterReturnQuestionId] = useState<
+    string | undefined
+  >();
   const [outcomeOverrides, setOutcomeOverrides] = useState<
     Readonly<Record<string, ReviewOutcomeSelection>>
   >(outcomeLoad.outcomes);
@@ -1213,9 +1357,40 @@ export function ReviewSurface({
     () => parseReviewFilterSearchParams(searchParams.toString()),
     [searchParams],
   );
+  const reviewOutcomeFilterContext = useMemo(() => {
+    if (outcomeLoad.error) return undefined;
+    const source = {
+      collectionId: paper.source.collection.id,
+      relativePath: paper.source.relativePath,
+    };
+    return {
+      values: Object.fromEntries(
+        paper.sections.flatMap((section) =>
+          section.questions.map((question) => {
+            const valueFor = (side: ReviewSide) => {
+              const target = reviewTargetForNode(question, side, source);
+              return target
+                ? (displayedReviewOutcome(
+                    question,
+                    side,
+                    source,
+                    outcomeLoad.destination,
+                    outcomeOverrides,
+                  ) ?? null)
+                : undefined;
+            };
+            return [
+              question.id,
+              { answer: valueFor('answer'), question: valueFor('question') },
+            ];
+          }),
+        ),
+      ),
+    };
+  }, [outcomeLoad.destination, outcomeLoad.error, outcomeOverrides, paper]);
   const result = useMemo(
-    () => filterReviewPaper(paper, selection),
-    [paper, selection],
+    () => filterReviewPaper(paper, selection, reviewOutcomeFilterContext),
+    [paper, reviewOutcomeFilterContext, selection],
   );
   const displayNodeById = useMemo(
     () =>
@@ -1234,6 +1409,15 @@ export function ReviewSurface({
     () => new Set(result.matchingNodeIds),
     [result.matchingNodeIds],
   );
+  const selectedFilterCount =
+    DIMENSIONAL_TAG_AXES.reduce(
+      (count, axis) => count + selection[axis].length,
+      0,
+    ) +
+    selection.questionRag.length +
+    selection.answerRag.length +
+    selection.questionReview.length +
+    selection.answerReview.length;
 
   const checkSourceFreshness = useCallback(async () => {
     if (sourceFreshnessPending.current) return;
@@ -1459,7 +1643,7 @@ export function ReviewSurface({
   }
 
   function toggleStateFilter(
-    parameter: 'answerRag' | 'questionRag',
+    parameter: 'answerRag' | 'answerReview' | 'questionRag' | 'questionReview',
     value: string,
   ) {
     const selected = selection[parameter].includes(value);
@@ -1492,6 +1676,30 @@ export function ReviewSurface({
     const next = new URLSearchParams(searchParams.toString());
     next.set('question', id);
     replaceSearchParams(next);
+  }
+
+  function showFilters() {
+    setFilterReturnQuestionId(activeId);
+    requestAnimationFrame(() => {
+      const panel = document.getElementById('review-filters');
+      panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      panel?.focus({ preventScroll: true });
+    });
+  }
+
+  function returnToQuestion() {
+    const target =
+      filterReturnQuestionId &&
+      result.matchingQuestionTreeIds.includes(filterReturnQuestionId)
+        ? filterReturnQuestionId
+        : activeId;
+    if (!target) return;
+    navigateTo(target);
+    requestAnimationFrame(() => {
+      const question = document.getElementById(`question-${target}`);
+      question?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      question?.focus({ preventScroll: true });
+    });
   }
 
   function refreshPaper() {
@@ -1532,7 +1740,7 @@ export function ReviewSurface({
 
   return (
     <main className="paper-shell" id="paper-top">
-      <SiteHeader compact />
+      <SiteHeader compact outcomeDestination={outcomeLoad.destination} />
       <header className="paper-hero">
         <div className="paper-breadcrumb">
           <Link href="/">Paper index</Link>
@@ -1590,6 +1798,16 @@ export function ReviewSurface({
         onClear={clearFilters}
         onToggle={toggleFilter}
         onToggleState={toggleStateFilter}
+        onReturnToQuestion={
+          filterReturnQuestionId ? returnToQuestion : undefined
+        }
+        reviewOutcomeError={outcomeLoad.error}
+        reviewOutcomeFacets={result.reviewOutcomeFacets}
+        returnQuestionLabel={
+          filterReturnQuestionId
+            ? (displayNodeById.get(filterReturnQuestionId)?.label ?? 'question')
+            : undefined
+        }
         selection={selection}
         stateFacets={result.stateFacets}
       />
@@ -1598,6 +1816,17 @@ export function ReviewSurface({
         className="review-toolbar"
         aria-label="Display and feedback preferences"
       >
+        <button
+          aria-controls="review-filters"
+          className="toolbar-filter-button"
+          onClick={showFilters}
+          type="button"
+        >
+          Filters
+          <strong aria-label={`${selectedFilterCount} active filters`}>
+            {selectedFilterCount}
+          </strong>
+        </button>
         <div className="review-toolbar-group">
           <span className="toolbar-label">Display</span>
           <PreferenceToggle
@@ -1642,7 +1871,7 @@ export function ReviewSurface({
               />
               <span className="feedback-mode-copy">
                 {preferences.reviewControlMode === 'simple'
-                  ? 'Approved / Change Requested / Reset'
+                  ? 'Looks good / Make a change / Reset'
                   : 'All review requests'}
               </span>
             </div>

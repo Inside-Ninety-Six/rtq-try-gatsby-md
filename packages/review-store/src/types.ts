@@ -1,5 +1,32 @@
 export type ReviewSide = "answer" | "question";
 
+export const REVIEW_OUTCOMES = [
+  "PRNS",
+  "PRG",
+  "PRBD",
+  "PRCS",
+  "PRCR",
+  "PRCC",
+] as const;
+
+export type ReviewOutcome = (typeof REVIEW_OUTCOMES)[number];
+
+export const LEGACY_REVIEW_OUTCOME_CONSOLIDATIONS = {
+  PRA: "PRBD",
+  PRG2: "PRG",
+  PRPCC: "PRG",
+  PRR: "PRBD",
+} as const satisfies Readonly<Record<string, ReviewOutcome>>;
+
+export const REMOVED_REVIEW_OUTCOMES = ["PRPCR", "PRRL", "PRCT"] as const;
+
+export function isReviewOutcome(value: unknown): value is ReviewOutcome {
+  return (
+    typeof value === "string" &&
+    (REVIEW_OUTCOMES as readonly string[]).includes(value)
+  );
+}
+
 export type ReviewTargetIdentity = Readonly<{
   questionId: string | null;
   side: ReviewSide;
@@ -25,13 +52,13 @@ export type ReviewOutcomeTarget = Readonly<{
 export type StoredReviewOutcome = ReviewOutcomeTarget &
   Readonly<{
     createdAt: string;
-    outcome: string;
+    outcome: ReviewOutcome;
     reviewer: string;
     updatedAt: string;
   }>;
 
 export type SetReviewOutcome = ReviewOutcomeTarget &
   Readonly<{
-    outcome: string;
+    outcome: ReviewOutcome;
     reviewer: string;
   }>;

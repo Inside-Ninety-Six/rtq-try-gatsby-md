@@ -40,7 +40,8 @@ recorded in the canonical
 `RTQ_REVIEW_OUTCOME_DESTINATION` selects exactly one outcome writer. It accepts
 `database` (the default) or `google-sheets`. The application never dual-writes;
 set it to `google-sheets` to use the retained Review API path for compatibility
-or rollback testing.
+or rollback testing. The paper-page masthead reports the active destination
+once; individual question review panels do not repeat it.
 
 `RTQ_REVIEWER` sets the short reviewer identity sent with outcomes and recorded
 with comments; it defaults to `ap` and accepts letters, numbers, dots,
@@ -94,9 +95,9 @@ the browser and does not read TOML or contact Google Sheets.
   review sides are independent, so answer-only and question-only layouts are
   supported. Display preferences stay in local browser storage and existing
   combined review-panel preferences migrate to the two switches.
-- Use the persistent **Simple review** switch to choose between **Approved**,
-  **Change Requested**, and **Reset**, or the complete descriptive request set.
-  Detailed mode adds **Change Complete**, **Marked Blocked**, and **Coming
+- Use the persistent **Simple review** switch to choose between **Looks good**,
+  **Make a change**, and **Reset**, or the complete descriptive request set.
+  Detailed mode adds **Change Complete**, **Block it**, and **Coming
   Soon**. The interface never requires reviewers to interpret internal PR
   codes. Reset clears only the state-scoped request in the configured
   destination and never removes SQLite feedback.

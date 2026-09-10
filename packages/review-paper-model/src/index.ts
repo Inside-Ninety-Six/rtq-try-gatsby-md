@@ -18,6 +18,8 @@ export {
   parseReviewFilterSearchParams,
   serializeDimensionalFilterSearchParams,
   serializeReviewFilterSearchParams,
+  PENDING_REVIEW_OUTCOME,
+  REVIEW_OUTCOME_FILTER_VALUES,
 } from './filters.ts';
 export { DIMENSIONAL_TAG_AXES, REVIEWABLE_COLLECTION_IDS } from './model.ts';
 export { readReviewMacros, REVIEW_MACROS_REPOSITORY_PATH } from './macros.ts';
@@ -48,6 +50,9 @@ export type {
   ReviewMacroDocument,
   ReviewMacroEntry,
   ReviewMacroKind,
+  ReviewOutcomeFacet,
+  ReviewOutcomeFilterContext,
+  ReviewOutcomeFilterSide,
   ReviewPaper,
   ReviewPaperImagePreparation,
   ReviewPaperMetadata,

@@ -6,11 +6,24 @@ import {
   type DimensionalTagAxis,
   type QuestionTreeMatch,
   type ReviewFilterSelection,
+  type ReviewOutcomeFacet,
+  type ReviewOutcomeFilterContext,
+  type ReviewOutcomeFilterSide,
   type ReviewPaper,
   type ReviewPaperNode,
   type ReviewStateFacet,
   type ReviewStateFilterSide,
 } from './model.ts';
+
+export const PENDING_REVIEW_OUTCOME = 'PRNS';
+export const REVIEW_OUTCOME_FILTER_VALUES = [
+  PENDING_REVIEW_OUTCOME,
+  'PRG',
+  'PRCR',
+  'PRCC',
+  'PRBD',
+  'PRCS',
+] as const;
 
 const facetLabels: Readonly<Record<DimensionalTagAxis, string>> = {
   family: 'Family',
@@ -28,6 +41,16 @@ const stateFacetParameters = {
 const stateFacetLabels: Readonly<Record<ReviewStateFilterSide, string>> = {
   answer: 'Answer state',
   question: 'Question state',
+};
+
+const outcomeFacetParameters = {
+  answer: 'answerReview',
+  question: 'questionReview',
+} as const;
+
+const outcomeFacetLabels: Readonly<Record<ReviewOutcomeFilterSide, string>> = {
+  answer: 'Answer review outcome',
+  question: 'Question review outcome',
 };
 
 function compareValues(left: string, right: string): number {
@@ -51,7 +74,9 @@ export function emptyReviewFilterSelection(): ReviewFilterSelection {
   return {
     ...emptyDimensionalFilterSelection(),
     answerRag: [],
+    answerReview: [],
     questionRag: [],
+    questionReview: [],
   };
 }
 
@@ -84,7 +109,9 @@ export function normalizeReviewFilterSelection(
   return {
     ...normalizeDimensionalFilterSelection(selection),
     answerRag: normalizeStateValues(selection.answerRag),
+    answerReview: normalizeStateValues(selection.answerReview),
     questionRag: normalizeStateValues(selection.questionRag),
+    questionReview: normalizeStateValues(selection.questionReview),
   };
 }
 
@@ -131,7 +158,9 @@ export function parseReviewFilterSearchParams(
   return normalizeReviewFilterSelection({
     ...parseDimensionalFilterSearchParams(searchParams),
     answerRag: searchParams.getAll('answer-rag'),
+    answerReview: searchParams.getAll('answer-review'),
     questionRag: searchParams.getAll('question-rag'),
+    questionReview: searchParams.getAll('question-review'),
   });
 }
 
@@ -145,12 +174,20 @@ export function serializeReviewFilterSearchParams(
   );
 
   searchParams.delete('answer-rag');
+  searchParams.delete('answer-review');
   searchParams.delete('question-rag');
+  searchParams.delete('question-review');
   for (const value of normalized.answerRag) {
     searchParams.append('answer-rag', value);
   }
+  for (const value of normalized.answerReview) {
+    searchParams.append('answer-review', value);
+  }
   for (const value of normalized.questionRag) {
     searchParams.append('question-rag', value);
+  }
+  for (const value of normalized.questionReview) {
+    searchParams.append('question-review', value);
   }
   searchParams.sort();
   return searchParams.toString();
@@ -217,6 +254,52 @@ function questionTrees(paper: ReviewPaper): Array<
   );
 }
 
+function reviewOutcomeValue(
+  question: ReviewPaperNode,
+  side: ReviewOutcomeFilterSide,
+  context: ReviewOutcomeFilterContext,
+): string | undefined {
+  const value = context.values[question.id]?.[side];
+  return value === null ? PENDING_REVIEW_OUTCOME : value;
+}
+
+function reviewOutcomeMatches(
+  actual: string | undefined,
+  selected: readonly string[],
+): boolean {
+  if (!actual) return false;
+  return selected.includes(actual);
+}
+
+function treeMatchesReviewOutcomes(
+  question: ReviewPaperNode,
+  selection: ReviewFilterSelection,
+  context: ReviewOutcomeFilterContext | undefined,
+): boolean {
+  if (!context) return true;
+  return (['question', 'answer'] as const).every((side) => {
+    const selected = selection[outcomeFacetParameters[side]];
+    return (
+      selected.length === 0 ||
+      reviewOutcomeMatches(
+        reviewOutcomeValue(question, side, context),
+        selected,
+      )
+    );
+  });
+}
+
+function treeHasMatchingNode(
+  tree: ReturnType<typeof questionTrees>[number],
+  selection: ReviewFilterSelection,
+  excludedAxis?: DimensionalTagAxis,
+  excludedStateSide?: ReviewStateFilterSide,
+): boolean {
+  return tree.nodes.some((node) =>
+    nodeMatches(node, selection, excludedAxis, excludedStateSide),
+  );
+}
+
 function facetValues(
   paper: ReviewPaper,
   selection: ReviewFilterSelection,
@@ -243,15 +326,18 @@ function facetCount(
   selection: ReviewFilterSelection,
   axis: DimensionalTagAxis,
   value: string,
+  outcomeContext?: ReviewOutcomeFilterContext,
 ): number {
-  return trees.filter((tree) =>
-    tree.nodes.some(
-      (node) =>
-        nodeMatches(node, selection, axis) &&
-        node.effectiveTags.some(
-          (tag) => tag.axis === axis && tag.value === value,
-        ),
-    ),
+  return trees.filter(
+    (tree) =>
+      treeMatchesReviewOutcomes(tree.question, selection, outcomeContext) &&
+      tree.nodes.some(
+        (node) =>
+          nodeMatches(node, selection, axis) &&
+          node.effectiveTags.some(
+            (tag) => tag.axis === axis && tag.value === value,
+          ),
+      ),
   ).length;
 }
 
@@ -280,23 +366,61 @@ function stateFacetCount(
   selection: ReviewFilterSelection,
   side: ReviewStateFilterSide,
   value: string,
+  outcomeContext?: ReviewOutcomeFilterContext,
 ): number {
-  return trees.filter((tree) =>
-    tree.nodes.some(
-      (node) =>
-        nodeMatches(node, selection, undefined, side) &&
-        node.review[side].contentRag === value,
-    ),
+  return trees.filter(
+    (tree) =>
+      treeMatchesReviewOutcomes(tree.question, selection, outcomeContext) &&
+      tree.nodes.some(
+        (node) =>
+          nodeMatches(node, selection, undefined, side) &&
+          node.review[side].contentRag === value,
+      ),
+  ).length;
+}
+
+function reviewOutcomeFacetValues(
+  selection: ReviewFilterSelection,
+  side: ReviewOutcomeFilterSide,
+): string[] {
+  const standard = new Set<string>(REVIEW_OUTCOME_FILTER_VALUES);
+  const selected = selection[outcomeFacetParameters[side]];
+  return [
+    ...REVIEW_OUTCOME_FILTER_VALUES,
+    ...selected.filter((value) => !standard.has(value)).sort(compareValues),
+  ];
+}
+
+function reviewOutcomeFacetCount(
+  trees: ReturnType<typeof questionTrees>,
+  selection: ReviewFilterSelection,
+  side: ReviewOutcomeFilterSide,
+  value: string,
+  context: ReviewOutcomeFilterContext,
+): number {
+  const parameter = outcomeFacetParameters[side];
+  const candidateSelection = normalizeReviewFilterSelection({
+    ...selection,
+    [parameter]: [value],
+  });
+  return trees.filter(
+    (tree) =>
+      treeHasMatchingNode(tree, candidateSelection) &&
+      treeMatchesReviewOutcomes(tree.question, candidateSelection, context),
   ).length;
 }
 
 export function filterReviewPaper(
   paper: ReviewPaper,
   requestedSelection: Partial<ReviewFilterSelection> = {},
+  outcomeContext?: ReviewOutcomeFilterContext,
 ): DimensionalFilterResult {
   const selection = normalizeReviewFilterSelection(requestedSelection);
   const trees = questionTrees(paper);
   const questionTreeMatches: QuestionTreeMatch[] = trees.flatMap((tree) => {
+    if (!treeMatchesReviewOutcomes(tree.question, selection, outcomeContext)) {
+      return [];
+    }
     const matchingNodeIds = tree.nodes
       .filter((node) => nodeMatches(node, selection))
       .map((node) => node.id);
@@ -315,7 +439,7 @@ export function filterReviewPaper(
     axis,
     label: facetLabels[axis],
     options: facetValues(paper, selection, axis).map((value) => {
-      const count = facetCount(trees, selection, axis, value);
+      const count = facetCount(trees, selection, axis, value, outcomeContext);
       const selected = selection[axis].includes(value);
       return { count, disabled: count === 0 && !selected, selected, value };
     }),
@@ -326,7 +450,13 @@ export function filterReviewPaper(
       return {
         label: stateFacetLabels[side],
         options: stateFacetValues(paper, selection, side).map((value) => {
-          const count = stateFacetCount(trees, selection, side, value);
+          const count = stateFacetCount(
+            trees,
+            selection,
+            side,
+            value,
+            outcomeContext,
+          );
           const selected = selection[parameter].includes(value);
           return { count, disabled: count === 0 && !selected, selected, value };
         }),
@@ -335,6 +465,32 @@ export function filterReviewPaper(
       };
     },
   );
+  const reviewOutcomeFacets: ReviewOutcomeFacet[] = outcomeContext
+    ? (['question', 'answer'] as const).map((side) => {
+        const parameter = outcomeFacetParameters[side];
+        return {
+          label: outcomeFacetLabels[side],
+          options: reviewOutcomeFacetValues(selection, side).map((value) => {
+            const count = reviewOutcomeFacetCount(
+              trees,
+              selection,
+              side,
+              value,
+              outcomeContext,
+            );
+            const selected = selection[parameter].includes(value);
+            return {
+              count,
+              disabled: count === 0 && !selected,
+              selected,
+              value,
+            };
+          }),
+          parameter,
+          side,
+        };
+      })
+    : [];
   const matchingNodeIds = questionTreeMatches.flatMap(
     (match) => match.matchingNodeIds,
   );
@@ -356,6 +512,7 @@ export function filterReviewPaper(
     matchingQuestionTreeCount: questionTreeMatches.length,
     matchingQuestionTreeIds,
     questionTreeMatches,
+    reviewOutcomeFacets,
     selection,
     stateFacets,
     totalQuestionTreeCount: trees.length,

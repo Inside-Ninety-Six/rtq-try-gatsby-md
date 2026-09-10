@@ -1,4 +1,7 @@
-import type { ReviewPaperNode } from '@rtq/review-paper-model/client';
+import {
+  PENDING_REVIEW_OUTCOME,
+  type ReviewPaperNode,
+} from '@rtq/review-paper-model/client';
 import type { LocalReviewComment, ReviewSide } from '@rtq/review-store/types';
 
 export type {
@@ -26,12 +29,38 @@ export const REVIEW_SHEET_CODES = [
 export type ReviewOutcome = (typeof REVIEW_OUTCOMES)[number];
 
 export const REVIEW_OUTCOME_OPTIONS = [
-  { label: 'Approved', outcome: 'PRG', tone: 'approved' },
-  { label: 'Change Requested', outcome: 'PRCR', tone: 'change-requested' },
-  { label: 'Change Complete', outcome: 'PRCC', tone: 'change-complete' },
-  { label: 'Marked Blocked', outcome: 'PRBD', tone: 'blocked' },
-  { label: 'Coming Soon', outcome: 'PRCS', tone: 'coming-soon' },
+  {
+    actionLabel: 'Looks good',
+    label: 'Approved',
+    outcome: 'PRG',
+    tone: 'approved',
+  },
+  {
+    actionLabel: 'Make a change',
+    label: 'Change Requested',
+    outcome: 'PRCR',
+    tone: 'change-requested',
+  },
+  {
+    actionLabel: 'Change Complete',
+    label: 'Change Complete',
+    outcome: 'PRCC',
+    tone: 'change-complete',
+  },
+  {
+    actionLabel: 'Block it',
+    label: 'Marked Blocked',
+    outcome: 'PRBD',
+    tone: 'blocked',
+  },
+  {
+    actionLabel: 'Coming Soon',
+    label: 'Coming Soon',
+    outcome: 'PRCS',
+    tone: 'coming-soon',
+  },
 ] as const satisfies readonly {
+  actionLabel: string;
   label: string;
   outcome: ReviewOutcome;
   tone: string;
@@ -80,6 +109,43 @@ export function isReviewOutcome(value: unknown): value is ReviewOutcome {
 export function reviewOutcomeLabel(outcome: ReviewOutcome): string {
   return REVIEW_OUTCOME_OPTIONS.find((option) => option.outcome === outcome)!
     .label;
+}
+
+export function reviewOutcomeFilterLabel(value: string): string {
+  if (value === PENDING_REVIEW_OUTCOME) return 'Pending';
+  if (!isReviewOutcome(value)) return value;
+  const labels: Readonly<Record<ReviewOutcome, string>> = {
+    PRBD: 'Blocked',
+    PRCC: 'Ready For Review',
+    PRCR: 'Reviewed (Comments)',
+    PRCS: 'Coming Soon',
+    PRG: 'Approved',
+  };
+  return labels[value];
+}
+
+export function reviewOutcomeTone(
+  value: ReviewOutcome,
+): (typeof REVIEW_OUTCOME_OPTIONS)[number]['tone'] {
+  return REVIEW_OUTCOME_OPTIONS.find((option) => option.outcome === value)!
+    .tone;
+}
+
+export function displayedReviewOutcome(
+  node: ReviewPaperNode,
+  side: ReviewSide,
+  source: Readonly<{ collectionId: string; relativePath: string }>,
+  destination: ReviewOutcomeDestination,
+  overrides: Readonly<Record<string, ReviewOutcomeSelection>>,
+): ReviewOutcomeSelection | undefined {
+  const target = reviewTargetForNode(node, side, source);
+  if (!target) return undefined;
+  const key = reviewTargetKey(target);
+  if (Object.hasOwn(overrides, key)) return overrides[key];
+  const sourceOutcome = node.review[side].reviewOutcome;
+  return destination === 'google-sheets' && isReviewOutcome(sourceOutcome)
+    ? sourceOutcome
+    : undefined;
 }
 
 export function isReviewSide(value: unknown): value is ReviewSide {

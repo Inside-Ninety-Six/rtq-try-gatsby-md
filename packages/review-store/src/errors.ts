@@ -13,8 +13,8 @@ export class ReviewCommentConflictError extends Error {
 }
 
 export class ReviewStoreValidationError extends Error {
-  constructor(field: string) {
-    super(`Review store field "${field}" must not be empty.`);
+  constructor(field: string, message?: string) {
+    super(message ?? `Review store field "${field}" must not be empty.`);
     this.name = "ReviewStoreValidationError";
   }
 }

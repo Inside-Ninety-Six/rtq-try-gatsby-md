@@ -53,17 +53,17 @@ test("returns only exact current-state matches in deterministic order", () => {
   });
   store.outcomes.set({
     ...target("uuid-a", "question", "rag_wf_ng1"),
-    outcome: "PRR",
+    outcome: "PRBD",
     reviewer: "reviewer-2",
   });
   store.outcomes.set({
     ...target("uuid-a", "answer", "rag_wf_ng2"),
-    outcome: "PRG2",
+    outcome: "PRCC",
     reviewer: "reviewer-3",
   });
   store.outcomes.set({
     ...target("uuid-a", "answer", "rag_wf_ng1"),
-    outcome: "STALE",
+    outcome: "PRCR",
     reviewer: "reviewer-4",
   });
 
@@ -91,13 +91,13 @@ test("returns only exact current-state matches in deterministic order", () => {
     })),
     [
       {
-        outcome: "PRG2",
+        outcome: "PRCC",
         ragState: "rag_wf_ng2",
         side: "answer",
         uuid: "uuid-a",
       },
       {
-        outcome: "PRR",
+        outcome: "PRBD",
         ragState: "rag_wf_ng1",
         side: "question",
         uuid: "uuid-a",
@@ -123,10 +123,10 @@ test("reflects replacement and reset semantics without changing stored rows", ()
   });
   store.outcomes.set({
     ...selected,
-    outcome: "PRR",
+    outcome: "PRCR",
     reviewer: "second",
   });
-  assert.equal(store.outcomes.resolve([selected])[0]?.outcome, "PRR");
+  assert.equal(store.outcomes.resolve([selected])[0]?.outcome, "PRCR");
   assert.equal(store.outcomes.clear(selected), true);
   assert.deepEqual(store.outcomes.resolve([selected]), []);
   store.close();
@@ -169,7 +169,7 @@ test("resolves a large current-state batch and returns only actionable changes",
       "uuid-09999",
       "answer",
       "rag_wf_ng3",
-      "PRG2",
+      "PRBD",
       "reviewer-2",
       "2026-09-09T09:00:00.000Z",
       "2026-09-09T09:00:00.000Z",
@@ -191,7 +191,7 @@ test("resolves a large current-state batch and returns only actionable changes",
     matches.map(({ uuid, side, outcome }) => ({ outcome, side, uuid })),
     [
       { outcome: "PRG", side: "question", uuid: "uuid-05000" },
-      { outcome: "PRG2", side: "answer", uuid: "uuid-09999" },
+      { outcome: "PRBD", side: "answer", uuid: "uuid-09999" },
     ],
   );
   reader.close();
@@ -276,6 +276,49 @@ test("the read-only boundary reports invalid stored rows with identity context",
       error.message.includes('uuid="uuid-invalid"') &&
       error.message.includes('field "outcome"'),
   );
+  reader.close();
+  rmSync(directory, { force: true, recursive: true });
+});
+
+test("reports every retired outcome with its required safe disposition", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "rtq-legacy-outcomes-"));
+  const databasePath = path.join(directory, "review.sqlite");
+  const store = openReviewStore({ databasePath });
+  store.close();
+
+  const legacy = [
+    ["PRG2", 'consolidate it into "PRG"'],
+    ["PRPCC", 'consolidate it into "PRG"'],
+    ["PRR", 'consolidate it into "PRBD"'],
+    ["PRA", 'consolidate it into "PRBD"'],
+    ["PRPCR", "choose an explicit safe disposition"],
+    ["PRRL", "choose an explicit safe disposition"],
+    ["PRCT", "choose an explicit safe disposition"],
+  ] as const;
+  const database = new Database(databasePath);
+  const insert = database.prepare(
+    `insert into review_outcomes
+     (rtq_uuid, side, rag_state, outcome, reviewer, created_at, updated_at)
+     values (?, 'answer', ?, ?, 'reviewer', '2026-09-10T10:00:00.000Z', '2026-09-10T10:00:00.000Z')`,
+  );
+  for (const [index, [outcome]] of legacy.entries()) {
+    insert.run(`uuid-${index}`, `rag_wf_ng${index}`, outcome);
+  }
+  database.close();
+
+  const reader = openReviewOutcomeReader({ databasePath });
+  for (const [index, [outcome, disposition]] of legacy.entries()) {
+    assert.throws(
+      () =>
+        reader.resolve([
+          target(`uuid-${index}`, "answer", `rag_wf_ng${index}`),
+        ]),
+      (error: unknown) =>
+        error instanceof ReviewStoreDataError &&
+        error.message.includes(`outcome "${outcome}" is not canonical`) &&
+        error.message.includes(disposition),
+    );
+  }
   reader.close();
   rmSync(directory, { force: true, recursive: true });
 });

@@ -15,8 +15,11 @@ import {
   REVIEW_OUTCOME_OPTIONS,
   REVIEW_OUTCOMES,
   SIMPLE_REVIEW_OUTCOME_OPTIONS,
+  displayedReviewOutcome,
   normalizeSourceRag,
   partitionReviewComments,
+  reviewOutcomeFilterLabel,
+  reviewOutcomeTone,
   reviewCommentTargetForNode,
   runUniqueReviewRequest,
   sheetCodeFromSourceRag,
@@ -57,9 +60,41 @@ test('maps canonical request values to the agreed reviewer-facing labels', () =>
     ],
   );
   assert.deepEqual(
+    REVIEW_OUTCOME_OPTIONS.map(({ actionLabel, outcome }) => [
+      outcome,
+      actionLabel,
+    ]),
+    [
+      ['PRG', 'Looks good'],
+      ['PRCR', 'Make a change'],
+      ['PRCC', 'Change Complete'],
+      ['PRBD', 'Block it'],
+      ['PRCS', 'Coming Soon'],
+    ],
+  );
+  assert.deepEqual(
     SIMPLE_REVIEW_OUTCOME_OPTIONS.map(({ outcome }) => outcome),
     ['PRG', 'PRCR'],
   );
+  assert.deepEqual(
+    ['PRNS', ...REVIEW_OUTCOMES].map((outcome) => [
+      outcome,
+      reviewOutcomeFilterLabel(outcome),
+    ]),
+    [
+      ['PRNS', 'Pending'],
+      ['PRG', 'Approved'],
+      ['PRCR', 'Reviewed (Comments)'],
+      ['PRCC', 'Ready For Review'],
+      ['PRBD', 'Blocked'],
+      ['PRCS', 'Coming Soon'],
+    ],
+  );
+  assert.equal(reviewOutcomeTone('PRG'), 'approved');
+  assert.equal(reviewOutcomeTone('PRCR'), 'change-requested');
+  assert.equal(reviewOutcomeTone('PRCC'), 'change-complete');
+  assert.equal(reviewOutcomeTone('PRBD'), 'blocked');
+  assert.equal(reviewOutcomeTone('PRCS'), 'coming-soon');
 });
 
 test('normalizes source states and derives only supported sheet routes', () => {
@@ -72,6 +107,48 @@ test('normalizes source states and derives only supported sheet routes', () => {
   assert.equal(sheetCodeFromSourceRag('rag_wf_blocked'), null);
   assert.equal(sheetCodeFromSourceRag('rag_wf_g4'), null);
   assert.equal(sheetCodeFromSourceRag('rag_wf_green'), null);
+});
+
+test('resolves destination-specific displayed outcomes from live overrides', () => {
+  const node = {
+    depth: 0,
+    id: target.nodeId,
+    questionId: target.questionId,
+    review: {
+      answer: { contentRag: target.ragState, legacyComments: '' },
+      question: {
+        contentRag: target.ragState,
+        legacyComments: '',
+        reviewOutcome: 'PRCR',
+      },
+    },
+    uuid: target.uuid,
+  } as unknown as ReviewPaperNode;
+  const source = {
+    collectionId: target.collectionId,
+    relativePath: target.relativePath,
+  };
+
+  assert.equal(
+    displayedReviewOutcome(node, 'question', source, 'database', {}),
+    undefined,
+  );
+  assert.equal(
+    displayedReviewOutcome(node, 'question', source, 'google-sheets', {}),
+    'PRCR',
+  );
+  assert.equal(
+    displayedReviewOutcome(node, 'question', source, 'database', {
+      [`${target.uuid}:question`]: 'PRG',
+    }),
+    'PRG',
+  );
+  assert.equal(
+    displayedReviewOutcome(node, 'question', source, 'database', {
+      [`${target.uuid}:question`]: null,
+    }),
+    null,
+  );
 });
 
 test('partitions current and historical comments by exact side and state', () => {

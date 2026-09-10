@@ -11,6 +11,8 @@ export {
   parseReviewFilterSearchParams,
   serializeDimensionalFilterSearchParams,
   serializeReviewFilterSearchParams,
+  PENDING_REVIEW_OUTCOME,
+  REVIEW_OUTCOME_FILTER_VALUES,
 } from './filters.ts';
 export { DIMENSIONAL_TAG_AXES } from './model.ts';
 export type {
@@ -26,6 +28,9 @@ export type {
   ReviewPaper,
   ReviewPaperNode,
   ReviewFilterSelection,
+  ReviewOutcomeFacet,
+  ReviewOutcomeFilterContext,
+  ReviewOutcomeFilterSide,
   ReviewStateFacet,
   ReviewStateFilterSide,
   ReviewTargetState,

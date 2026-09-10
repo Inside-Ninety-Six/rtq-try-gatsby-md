@@ -31,9 +31,16 @@ export {
 export type { OpenReviewStoreOptions, ReviewStore } from "./review-store.ts";
 export type {
   LocalReviewComment,
+  ReviewOutcome,
   ReviewOutcomeTarget,
   ReviewSide,
   ReviewTargetIdentity,
   SetReviewOutcome,
   StoredReviewOutcome,
+} from "./types.ts";
+export {
+  isReviewOutcome,
+  LEGACY_REVIEW_OUTCOME_CONSOLIDATIONS,
+  REMOVED_REVIEW_OUTCOMES,
+  REVIEW_OUTCOMES,
 } from "./types.ts";

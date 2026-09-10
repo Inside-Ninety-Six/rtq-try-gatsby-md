@@ -227,13 +227,13 @@ test("outcomes replace within one identity and state without consumption flags",
   });
   const replacement = store.outcomes.set({
     ...target,
-    outcome: "PRR",
+    outcome: "PRCR",
     reviewer: "reviewer-2",
   });
   store.outcomes.set({
     ...target,
     ragState: "rag_wf_g2",
-    outcome: "PRG2",
+    outcome: "PRCC",
     reviewer: "reviewer-3",
   });
   store.outcomes.set({
@@ -245,10 +245,10 @@ test("outcomes replace within one identity and state without consumption flags",
 
   assert.equal(replacement.createdAt, first.createdAt);
   assert.equal(replacement.updatedAt, "2026-09-09T08:01:00.000Z");
-  assert.equal(store.outcomes.get(target)?.outcome, "PRR");
+  assert.equal(store.outcomes.get(target)?.outcome, "PRCR");
   assert.equal(
     store.outcomes.get({ ...target, ragState: "rag_wf_g2" })?.outcome,
-    "PRG2",
+    "PRCC",
   );
   assert.equal(
     store.outcomes.get({ ...target, side: "question" })?.reviewer,
@@ -287,13 +287,26 @@ test("outcomes persist and reject malformed writes", () => {
   assert.throws(
     () =>
       store.outcomes.set({
-        outcome: "",
+        outcome: "" as "PRG",
         ragState: "rag_wf_g1",
         reviewer: "up",
         side: "question",
         uuid: "uuid-1",
       }),
     ReviewStoreValidationError,
+  );
+  assert.throws(
+    () =>
+      store.outcomes.set({
+        outcome: "PRR" as "PRG",
+        ragState: "rag_wf_g1",
+        reviewer: "up",
+        side: "question",
+        uuid: "uuid-1",
+      }),
+    (error: unknown) =>
+      error instanceof ReviewStoreValidationError &&
+      error.message.includes("PRNS, PRG, PRBD, PRCS, PRCR, PRCC"),
   );
   assert.throws(
     () =>

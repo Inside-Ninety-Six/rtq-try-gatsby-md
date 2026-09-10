@@ -20,14 +20,25 @@ for (const expected of [
   'Review filters',
   'Question state',
   'Answer state',
+  'Peer-review outcome',
+  'Question review outcome',
+  'Answer review outcome',
+  'Pending',
+  'Approved',
+  'Reviewed [(]Comments[)]',
+  'Ready For Review',
+  'Blocked',
+  'Coming Soon',
+  'Filters',
   'Workings &amp; answers',
   'Raw source',
   'Review workflow',
+  'Outcomes &amp; comments → local SQLite',
   'Node feedback',
   'Add comment',
   'Simple review',
-  'Approved',
-  'Change Requested',
+  'Looks good',
+  'Make a change',
   'Reset',
   'S1 Q1',
   'S1 Q5a',
@@ -88,6 +99,12 @@ const independentStates = await read(
 );
 assert.match(independentStates.text, /1<!-- --> \/ <!-- -->6<!-- --> matching/);
 assert.match(independentStates.text, /S1 Q8/);
+
+const pendingReview = await read(`${paperPath}?question-review=PRNS`);
+assert.doesNotMatch(pendingReview.text, /No question shares that exact lens/);
+
+const approvedOnly = await read(`${paperPath}?question-review=PRG`);
+assert.match(approvedOnly.text, /No question shares that exact lens/);
 
 const empty = await read(`${paperPath}?family=family.age&frame=frame.algebra`);
 assert.match(empty.text, /No question shares that exact lens/);

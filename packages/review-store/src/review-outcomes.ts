@@ -9,9 +9,16 @@ import {
 import { reviewOutcomes } from "./schema.ts";
 import type { ReviewStoreDatabase } from "./review-store.ts";
 import type {
+  ReviewOutcome,
   ReviewOutcomeTarget,
   SetReviewOutcome,
   StoredReviewOutcome,
+} from "./types.ts";
+import {
+  LEGACY_REVIEW_OUTCOME_CONSOLIDATIONS,
+  REMOVED_REVIEW_OUTCOMES,
+  REVIEW_OUTCOMES,
+  isReviewOutcome,
 } from "./types.ts";
 
 export type ReviewOutcomeRepository = Readonly<{
@@ -62,6 +69,24 @@ function storedString(row: OutcomeRecord, field: keyof OutcomeRecord): string {
   return value;
 }
 
+function storedOutcome(row: OutcomeRecord): ReviewOutcome {
+  const outcome = storedString(row, "outcome");
+  if (isReviewOutcome(outcome)) return outcome;
+
+  const consolidation =
+    LEGACY_REVIEW_OUTCOME_CONSOLIDATIONS[
+      outcome as keyof typeof LEGACY_REVIEW_OUTCOME_CONSOLIDATIONS
+    ];
+  const disposition = consolidation
+    ? `consolidate it into "${consolidation}" before syncing`
+    : (REMOVED_REVIEW_OUTCOMES as readonly string[]).includes(outcome)
+      ? "choose an explicit safe disposition before syncing"
+      : "correct or remove it before syncing";
+  throw new ReviewStoreDataError(
+    `Invalid stored review outcome (${describeIdentity(row)}): outcome ${JSON.stringify(outcome)} is not canonical; ${disposition}.`,
+  );
+}
+
 function toOutcome(row: OutcomeRecord): StoredReviewOutcome {
   const side = storedString(row, "side");
   if (side !== "answer" && side !== "question") {
@@ -71,7 +96,7 @@ function toOutcome(row: OutcomeRecord): StoredReviewOutcome {
   }
   return {
     createdAt: storedString(row, "createdAt"),
-    outcome: storedString(row, "outcome"),
+    outcome: storedOutcome(row),
     ragState: storedString(row, "ragState"),
     reviewer: storedString(row, "reviewer"),
     side,
@@ -150,7 +175,12 @@ export function createReviewOutcomeRepository(
     resolve: reader.resolve,
     set(input) {
       validateTarget(input);
-      requireValue("outcome", input.outcome);
+      if (!isReviewOutcome(input.outcome)) {
+        throw new ReviewStoreValidationError(
+          "outcome",
+          `Review store field "outcome" must be one of: ${REVIEW_OUTCOMES.join(", ")}.`,
+        );
+      }
       requireValue("reviewer", input.reviewer);
       try {
         return db.transaction((transaction) => {

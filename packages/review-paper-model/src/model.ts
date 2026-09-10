@@ -210,11 +210,23 @@ export type DimensionalFilterSelection = Readonly<
 >;
 
 export type ReviewStateFilterSide = 'answer' | 'question';
+export type ReviewOutcomeFilterSide = ReviewStateFilterSide;
+
+export type ReviewOutcomeFilterContext = Readonly<{
+  values: Readonly<
+    Record<
+      string,
+      Readonly<Record<ReviewOutcomeFilterSide, string | null | undefined>>
+    >
+  >;
+}>;
 
 export type ReviewFilterSelection = DimensionalFilterSelection &
   Readonly<{
     answerRag: readonly string[];
+    answerReview: readonly string[];
     questionRag: readonly string[];
+    questionReview: readonly string[];
   }>;
 
 export type DimensionalFacetOption = Readonly<{
@@ -237,6 +249,13 @@ export type ReviewStateFacet = Readonly<{
   side: ReviewStateFilterSide;
 }>;
 
+export type ReviewOutcomeFacet = Readonly<{
+  label: string;
+  options: readonly DimensionalFacetOption[];
+  parameter: 'answerReview' | 'questionReview';
+  side: ReviewOutcomeFilterSide;
+}>;
+
 export type QuestionTreeMatch = Readonly<{
   matchingNodeIds: readonly string[];
   questionId: string;
@@ -254,6 +273,7 @@ export type DimensionalFilterResult = Readonly<{
   matchingQuestionTreeCount: number;
   matchingQuestionTreeIds: readonly string[];
   questionTreeMatches: readonly QuestionTreeMatch[];
+  reviewOutcomeFacets: readonly ReviewOutcomeFacet[];
   selection: ReviewFilterSelection;
   stateFacets: readonly ReviewStateFacet[];
   totalQuestionTreeCount: number;

@@ -6,6 +6,7 @@ const componentUrl = new URL(
   '../components/review-surface.tsx',
   import.meta.url,
 );
+const siteHeaderUrl = new URL('../components/site-header.tsx', import.meta.url);
 const cssUrl = new URL('../app/globals.css', import.meta.url);
 const homeUrl = new URL('../app/page.tsx', import.meta.url);
 const browserUrl = new URL('../components/file-browser.tsx', import.meta.url);
@@ -38,12 +39,12 @@ test('review requests use descriptive canonical actions in both modes', async ()
   assert.match(component, /controlMode === 'simple'/);
   assert.match(component, /SIMPLE_REVIEW_OUTCOME_OPTIONS\.map/);
   assert.match(component, /REVIEW_OUTCOME_OPTIONS\.map/);
-  assert.match(component, /option\.label/);
+  assert.match(component, /option\.actionLabel/);
   assert.match(component, /submitOutcome\(null\)/);
   assert.match(component, />\s*Reset\s*<\/button>/);
   assert.match(
     css,
-    /\.outcome-action--approved\s*{[^}]*background:\s*var\(--ready\)/s,
+    /\.outcome-action--approved\s*{[^}]*background:\s*var\(--review-option-background\)/s,
   );
   assert.match(css, /\.outcome-action--change-requested\s*{/);
   assert.match(css, /\.outcome-action--change-complete\s*{/);
@@ -54,6 +55,83 @@ test('review requests use descriptive canonical actions in both modes', async ()
     css,
     /\.review-action-status--success\s*{[^}]*font-weight:\s*800/s,
   );
+});
+
+test('review outcome filters are independent, URL-backed, and failure-safe', async () => {
+  const component = await fs.readFile(componentUrl, 'utf8');
+
+  assert.match(component, /<strong>Peer-review outcome<\/strong>/);
+  assert.match(
+    component,
+    /reviewOutcomeFacets=\{result\.reviewOutcomeFacets\}/,
+  );
+  assert.match(component, /reviewOutcomeFilterLabel\(option\.value\)/);
+  assert.match(component, /reviewOutcomeError=\{outcomeLoad\.error\}/);
+  assert.match(component, /selection\.questionReview\.length/);
+  assert.match(component, /selection\.answerReview\.length/);
+  assert.match(
+    component,
+    /filterReviewPaper\(paper, selection, reviewOutcomeFilterContext\)/,
+  );
+});
+
+test('top-level questions expose current outcomes and feedback as scan badges', async () => {
+  const [component, css] = await Promise.all([
+    fs.readFile(componentUrl, 'utf8'),
+    fs.readFile(cssUrl, 'utf8'),
+  ]);
+
+  assert.match(component, /function QuestionReviewActivity/);
+  assert.match(component, /node\.depth === 0/);
+  assert.match(component, /aria-label="Current review activity"/);
+  assert.match(component, /reviewOutcomeLabel\(outcome\)/);
+  assert.match(component, /commentGroups\.current\.length/);
+  assert.match(component, /runtime\.showPreviousFeedback/);
+  assert.match(css, /--review-approved-background:/);
+  assert.match(css, /--review-change-requested-background:/);
+  assert.match(css, /--review-change-complete-background:/);
+  assert.match(css, /--review-blocked-background:/);
+  assert.match(css, /--review-coming-soon-background:/);
+  assert.match(
+    css,
+    /\.review-activity-badge\s*{[^}]*background:\s*var\(--review-option-background/s,
+  );
+});
+
+test('the sticky toolbar keeps compact filter access with focus and return controls', async () => {
+  const [component, css] = await Promise.all([
+    fs.readFile(componentUrl, 'utf8'),
+    fs.readFile(cssUrl, 'utf8'),
+  ]);
+
+  assert.match(component, /aria-controls="review-filters"/);
+  assert.match(component, /selectedFilterCount/);
+  assert.match(component, /id="review-filters"/);
+  assert.match(component, /panel\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(component, /Back to \{returnQuestionLabel/);
+  assert.match(
+    css,
+    /\.review-toolbar\s*{[^}]*position:\s*sticky;[^}]*top:\s*0/s,
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 560px\)[\s\S]*\.review-toolbar\s*{[^}]*overflow-x:\s*auto;[^}]*position:\s*sticky/s,
+  );
+});
+
+test('reports the active outcome destination once in the page header', async () => {
+  const [component, siteHeader] = await Promise.all([
+    fs.readFile(componentUrl, 'utf8'),
+    fs.readFile(siteHeaderUrl, 'utf8'),
+  ]);
+
+  assert.match(
+    component,
+    /<SiteHeader compact outcomeDestination={outcomeLoad\.destination} \/>/,
+  );
+  assert.doesNotMatch(component, /Outcomes → Sheets/);
+  assert.match(siteHeader, /Outcomes & comments → local SQLite/);
+  assert.match(siteHeader, /Outcomes → Sheets · comments → local SQLite/);
 });
 
 test('the filtered paper rail links every visible question hierarchy level', async () => {

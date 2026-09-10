@@ -4,8 +4,8 @@ Status: living architecture, updated 10 September 2026.
 
 This document describes how Review Content Web records review decisions and how
 those decisions later change canonical paper TOML. It is intentionally a living
-document: the database-backed path is implemented, but its cutover task remains
-open while the workflow is reviewed and refined.
+document: the database-backed path is implemented and remains under review as
+its reviewer-facing workflow is refined.
 
 The central rule is that a review decision and a content-state transition are
 two separate events. The review website records a state-scoped decision. A
@@ -41,7 +41,7 @@ Operator runs the database-outcome sync in rtq-content
   -> sync inventories every top-level UUID and both current side states
   -> review-store resolves only exact UUID + side + state matches
   -> rtq-content applies the current transition policy
-  -> dry-run reports, or apply edits, only canonical RAG state fields
+  -> dry-run reports, or apply edits, canonical content and companion review fields
   -> stored review outcomes remain unchanged
 ```
 
@@ -66,14 +66,14 @@ as an internal request value:
 
 | Reviewer-facing action | Internal value | Content transition after sync |
 | ---------------------- | -------------- | ----------------------------- |
-| Approved               | `PRG`          | Advance to the next state     |
-| Change Requested       | `PRCR`         | No change                     |
+| Looks good             | `PRG`          | Advance to the next state     |
+| Make a change          | `PRCR`         | No change                     |
 | Change Complete        | `PRCC`         | No change                     |
-| Marked Blocked         | `PRBD`         | Move to Blocked               |
+| Block it               | `PRBD`         | Move to Blocked               |
 | Coming Soon            | `PRCS`         | Move to Coming Soon           |
 | Reset                  | no value       | No change                     |
 
-Simple mode exposes Approved, Change Requested, and Reset. Detailed mode adds
+Simple mode exposes Looks good, Make a change, and Reset. Detailed mode adds
 the other three canonical actions. Reset clears the request for the exact
 state-scoped target and returns it to the missing/`PRNS` default
 representation; `PRNS` is not submitted as another transition trigger.
@@ -128,6 +128,32 @@ review request succeeds, the TOML question or answer remains in its original
 state. This pull boundary keeps canonical edits visible, reviewable, and under
 the operator's control.
 
+The successful request is nevertheless visible immediately in Review Content
+Web. The page updates its already-loaded outcome map in memory, so the target's
+review badge, filter classification, and facet counts change without pretending
+that canonical content RAG has advanced. Reset removes that transient outcome
+from the same presentation state.
+
+The full filter panel provides independent **Question review outcome** and
+**Answer review outcome** facets. They classify only exact current-state
+outcomes. They contain only canonical review values, presented as **Pending**
+for `PRNS` or no exact outcome, **Approved** for `PRG`, **Reviewed (Comments)**
+for `PRCR`, **Ready For Review** for `PRCC`, **Blocked** for `PRBD`, and
+**Coming Soon** for `PRCS`. A load failure is reported as unavailable and is
+never treated as Pending. There are no synthetic or inverse filter options.
+Selections within one facet use OR; question outcome, answer outcome,
+content-RAG, and dimensional facets combine with AND. The selections live in
+the URL as `question-review` and `answer-review` parameters.
+
+Each top-level question heading also summarizes its exact current question and
+answer activity. Actionable outcomes use the same semantic label and colour
+mapping as their controls, while current-state comment counts remain visually
+distinct. Prior-state comment counts appear in this scan surface only when
+**Show previous feedback** is enabled. The sticky review toolbar exposes a
+compact Filters control and active-filter count; it moves focus to the normal
+non-sticky filter panel, which offers a return control to the question the
+reviewer was inspecting.
+
 ### 5. Resolve only currently applicable outcomes
 
 From `rtq-content/packages/papers`, the database sync first parses every
@@ -165,10 +191,14 @@ Apply the reported plan:
 pnpm papers:review-outcomes:sync:apply
 ```
 
-Dry-run is the default. Apply mode uses the line-preserving TOML updater and
-changes only the matching `rtq-question-rag` or `rtq-answer-rag` field. It does
-not update the companion review-outcome/comment fields, derived TOML, generated
-Markdown, PDFs, assets, Google Sheets, or the review database.
+Dry-run is the default. Apply mode uses the line-preserving TOML updater. `PRG`,
+`PRBD`, and `PRCS` update the matching `rtq-question-rag` or `rtq-answer-rag`
+field and reset its companion review field to `PRNS`. `PRCR` and `PRCC` do not
+change content RAG; they are retained in the companion review field. Reset is
+represented by the absence of an exact database outcome, so the sync returns a
+retained companion signal to `PRNS`. The database path never changes companion
+TOML comment fields, derived TOML, generated Markdown, PDFs, assets, Google
+Sheets, comments, or the review database.
 
 ## Replay and failure behaviour
 
@@ -181,6 +211,8 @@ The design does not need an “applied” database flag:
 - If a TOML edit remains, that side is now at its successor state. The earlier
   outcome no longer matches, so another sync does nothing unless a separate
   outcome exists for the successor state.
+- Clearing a retained PRCR or PRCC row causes the next sync to reset only the
+  matching companion TOML review field; comment history remains untouched.
 - A single sync calculates at most one transition for the state it observed;
   it does not cascade through outcomes stored for several future states.
 - Inventory, resolver, contract, or transition errors fail the run rather than
@@ -236,15 +268,15 @@ and Reset, stale review submissions, exclusive destination selection,
 current-state resolution, replay after canonical reset, and one-stage-per-sync
 behaviour.
 
-On 9 September 2026, the live canonical dry-run completed successfully across
-12,548 question/answer targets. The database contained no exact matching
-outcomes, so it proposed zero transitions and changed zero files.
+On 10 September 2026, the live canonical dry-run completed successfully across
+12,548 question/answer targets. The database contained no outcome rows and no
+exact matching outcomes, so it proposed zero transitions and zero field
+changes.
 
 ## Known gaps and future refinements
 
-This is the initial architecture record, not the final operational runbook.
-Keep the Review Content Web cutover task open while the review flow is assessed.
-Record newly identified behavioural gaps and decisions here before changing the
-implementation. The later operations task will add the final cutover, rollback,
-inspection, dashboard-refresh, troubleshooting, and validation procedure once
-the workflow is accepted.
+This is the architecture record, not the final operational runbook. Record
+newly identified behavioural gaps and decisions here before changing the
+implementation. The later operations task will add final rollback, inspection,
+dashboard-refresh, troubleshooting, and validation procedures once the
+workflow is accepted.
