@@ -29,21 +29,26 @@ test('display preferences use accessible switches and independent review sides',
   assert.doesNotMatch(component, /label="Show everything"/);
 });
 
-test('simple review exposes approve and reset while advanced review keeps all outcomes', async () => {
+test('review requests use descriptive canonical actions in both modes', async () => {
   const [component, css] = await Promise.all([
     fs.readFile(componentUrl, 'utf8'),
     fs.readFile(cssUrl, 'utf8'),
   ]);
 
   assert.match(component, /controlMode === 'simple'/);
-  assert.match(component, />\s*Approved\s*<\/button>/);
+  assert.match(component, /SIMPLE_REVIEW_OUTCOME_OPTIONS\.map/);
+  assert.match(component, /REVIEW_OUTCOME_OPTIONS\.map/);
+  assert.match(component, /option\.label/);
   assert.match(component, /submitOutcome\(null\)/);
   assert.match(component, />\s*Reset\s*<\/button>/);
-  assert.match(component, /REVIEW_OUTCOMES\.map/);
   assert.match(
     css,
-    /\.simple-outcome-approve\s*{[^}]*background:\s*var\(--ready\)/s,
+    /\.outcome-action--approved\s*{[^}]*background:\s*var\(--ready\)/s,
   );
+  assert.match(css, /\.outcome-action--change-requested\s*{/);
+  assert.match(css, /\.outcome-action--change-complete\s*{/);
+  assert.match(css, /\.outcome-action--blocked\s*{/);
+  assert.match(css, /\.outcome-action--coming-soon\s*{/);
   assert.match(css, /\.review-scope--success\s*{[^}]*background:\s*#eaf7f0/s);
   assert.match(
     css,

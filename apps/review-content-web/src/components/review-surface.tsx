@@ -42,11 +42,14 @@ import {
   type ReviewControlMode,
 } from '@/lib/review-view-model';
 import {
-  REVIEW_OUTCOMES,
+  REVIEW_OUTCOME_OPTIONS,
+  SIMPLE_REVIEW_OUTCOME_OPTIONS,
+  isReviewOutcome,
   partitionReviewComments,
   reviewCommentTargetForNode,
   reviewTargetForNode,
   reviewTargetKey,
+  reviewOutcomeLabel,
   runUniqueReviewRequest,
   type LocalReviewComment,
   type ReviewCommentLoad,
@@ -246,10 +249,14 @@ function ReviewScope({
     : { current: [], history: [] };
   const hasFeedback =
     commentGroups.current.length > 0 || commentGroups.history.length > 0;
+  const sourceOutcome = node.review[side].reviewOutcome;
+  const authoredOutcome = isReviewOutcome(sourceOutcome)
+    ? sourceOutcome
+    : undefined;
   const displayedOutcome = Object.hasOwn(runtime.outcomeOverrides, key)
     ? runtime.outcomeOverrides[key]
     : runtime.outcomeDestination === 'google-sheets'
-      ? node.review[side].reviewOutcome
+      ? authoredOutcome
       : undefined;
   const outcomeDisabledReason = !target
     ? targetUnavailableReason(node, topLevelQuestion, side)
@@ -271,7 +278,8 @@ function ReviewScope({
     } catch (error) {
       setStatus({
         kind: 'error',
-        message: error instanceof Error ? error.message : 'Outcome failed.',
+        message:
+          error instanceof Error ? error.message : 'Review request failed.',
       });
     }
   }
@@ -328,11 +336,11 @@ function ReviewScope({
           {outcomesEnabled ? (
             <>
               <div>
-                <dt>Outcome</dt>
+                <dt>Review request</dt>
                 <dd>
                   {displayedOutcome
-                    ? reviewStateLabel(displayedOutcome)
-                    : 'Not reviewed'}
+                    ? reviewOutcomeLabel(displayedOutcome)
+                    : 'No request'}
                 </dd>
               </div>
               {controlMode === 'advanced' &&
@@ -351,22 +359,25 @@ function ReviewScope({
         <>
           {controlMode === 'simple' ? (
             <div
-              aria-label={`${side} simple review outcomes`}
-              className="simple-outcome-actions"
+              aria-label={`${side} review requests`}
+              className="outcome-actions outcome-actions--simple"
             >
-              <button
-                aria-pressed={displayedOutcome === 'PRG'}
-                className="simple-outcome-approve"
-                disabled={Boolean(outcomeDisabledReason) || outcomePending}
-                onClick={() => void submitOutcome('PRG')}
-                title={outcomeDisabledReason}
-                type="button"
-              >
-                Approved
-              </button>
+              {SIMPLE_REVIEW_OUTCOME_OPTIONS.map((option) => (
+                <button
+                  aria-pressed={displayedOutcome === option.outcome}
+                  className={`outcome-action outcome-action--${option.tone}`}
+                  disabled={Boolean(outcomeDisabledReason) || outcomePending}
+                  key={option.outcome}
+                  onClick={() => void submitOutcome(option.outcome)}
+                  title={outcomeDisabledReason}
+                  type="button"
+                >
+                  {option.label}
+                </button>
+              ))}
               <button
                 aria-pressed={!displayedOutcome}
-                className="simple-outcome-reset"
+                className="outcome-action outcome-action--reset"
                 disabled={Boolean(outcomeDisabledReason) || outcomePending}
                 onClick={() => void submitOutcome(null)}
                 title={outcomeDisabledReason}
@@ -378,22 +389,31 @@ function ReviewScope({
           ) : (
             <div
               className="outcome-actions"
-              aria-label={`${side} review outcomes`}
+              aria-label={`${side} review requests`}
             >
-              {REVIEW_OUTCOMES.map((outcome) => (
+              {REVIEW_OUTCOME_OPTIONS.map((option) => (
                 <button
-                  aria-pressed={
-                    reviewStateLabel(displayedOutcome ?? '') === outcome
-                  }
+                  aria-pressed={displayedOutcome === option.outcome}
+                  className={`outcome-action outcome-action--${option.tone}`}
                   disabled={Boolean(outcomeDisabledReason) || outcomePending}
-                  key={outcome}
-                  onClick={() => void submitOutcome(outcome)}
+                  key={option.outcome}
+                  onClick={() => void submitOutcome(option.outcome)}
                   title={outcomeDisabledReason}
                   type="button"
                 >
-                  {outcome}
+                  {option.label}
                 </button>
               ))}
+              <button
+                aria-pressed={!displayedOutcome}
+                className="outcome-action outcome-action--reset"
+                disabled={Boolean(outcomeDisabledReason) || outcomePending}
+                onClick={() => void submitOutcome(null)}
+                title={outcomeDisabledReason}
+                type="button"
+              >
+                Reset
+              </button>
             </div>
           )}
           {outcomeDisabledReason ? (
@@ -1622,8 +1642,8 @@ export function ReviewSurface({
               />
               <span className="feedback-mode-copy">
                 {preferences.reviewControlMode === 'simple'
-                  ? 'Approved / Reset'
-                  : 'All outcomes'}
+                  ? 'Approved / Change Requested / Reset'
+                  : 'All review requests'}
               </span>
             </div>
             <div className="review-toolbar-group review-toolbar-group--feedback">

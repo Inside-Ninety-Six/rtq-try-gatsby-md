@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { isReviewOutcomeSelection } from '@/lib/review-outcomes';
+
 type ChangeRecord = {
   event: 'add' | 'change' | 'unlink';
   relativePath: string;
@@ -398,6 +400,20 @@ function annotateInheritedTagBadges() {
   });
 }
 
+function removeUnsupportedReviewOutcomeControls() {
+  const buttons = document.querySelectorAll<HTMLButtonElement>(
+    '.rtq-document button.review[data-rag]',
+  );
+
+  buttons.forEach(button => {
+    if (isReviewOutcomeSelection(button.dataset.rag)) {
+      return;
+    }
+    const listItem = button.closest('li.review');
+    (listItem ?? button).remove();
+  });
+}
+
 function setupQuestionNavStickiness() {
   const managedNavs = Array.from(
     document.querySelectorAll<HTMLElement>(
@@ -619,6 +635,22 @@ export function ReviewRuntime({
         return;
       }
 
+      const reviewOutcome = button.dataset.rag;
+      if (!isReviewOutcomeSelection(reviewOutcome)) {
+        const reviewStatus = document.getElementById(
+          `REVIEW-STATUS-${button.dataset.uuid}`,
+        );
+        if (reviewStatus) {
+          setStatusWithTimeout(
+            reviewStatus,
+            'Error: The review outcome is not supported.',
+            'error',
+            3000,
+          );
+        }
+        return;
+      }
+
       const reviewType = button.dataset.reviewType;
       const action: ReviewEndpointAction =
         reviewType === 'REVIEW_QUESTION' ? 'question-rag' : 'rag';
@@ -626,7 +658,7 @@ export function ReviewRuntime({
       void submitAsyncRequest(
         `REVIEW-STATUS-${button.dataset.uuid}`,
         {
-          rag: button.dataset.rag,
+          rag: reviewOutcome,
           reviewer: button.dataset.reviewer,
           sheet: button.dataset.sheet,
           uuid: button.dataset.uuid,
@@ -721,6 +753,7 @@ export function ReviewRuntime({
   }, [displayPreferences, hasLoadedDisplayPreferences]);
 
   useEffect(() => {
+    removeUnsupportedReviewOutcomeControls();
     annotateQuestionRagStates();
     annotateTopLevelQuestionNumbers();
     annotateInheritedTagBadges();

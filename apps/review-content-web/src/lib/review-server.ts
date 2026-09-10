@@ -128,7 +128,7 @@ export function parseReviewOutcomeRequest(
   const mutation = parseReviewMutationRequest(body);
   const outcome = body.outcome;
   if (outcome !== null && !isReviewOutcome(outcome)) {
-    throw new ReviewRequestError('Review outcome is not supported.');
+    throw new ReviewRequestError('Review request is not supported.');
   }
   return { ...mutation, outcome };
 }

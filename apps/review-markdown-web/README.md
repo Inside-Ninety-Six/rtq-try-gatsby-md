@@ -56,6 +56,11 @@ compatibility comment. Review Markdown Web consumes that metadata through the
 shared review Markdown contract, removes it from output, and renders the same
 native ordered or unordered list marker as the direct-content reviewers.
 
+Generated review controls use the canonical peer-review requests only: PRG,
+PRCR, PRCC, PRBD, and PRCS. Reset clears the current request back to the
+PRNS/default representation. The browser runtime and its server proxy both
+reject retired outcomes before contacting Review API.
+
 ## Checks and production build
 
 ```bash

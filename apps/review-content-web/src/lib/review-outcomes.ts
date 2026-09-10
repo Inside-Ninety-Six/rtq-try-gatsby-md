@@ -9,6 +9,7 @@ import {
 import type { ReviewOutcomeRequest } from './review-server.ts';
 import {
   isReviewOutcome,
+  reviewOutcomeLabel,
   reviewTargetForNode,
   reviewTargetKey,
   type ReviewOutcomeDestination,
@@ -74,10 +75,10 @@ export async function forwardReviewOutcome(
   return {
     message:
       input.outcome === null
-        ? 'Review outcome reset in Google Sheets.'
+        ? 'Review request reset in Google Sheets.'
         : input.outcome === 'PRG'
           ? 'Approved and submitted to Google Sheets.'
-          : `${input.outcome} submitted to Google Sheets.`,
+          : `${reviewOutcomeLabel(input.outcome)} submitted to Google Sheets.`,
     status: response.status,
   };
 }
@@ -99,7 +100,7 @@ export function persistReviewOutcome(
         uuid: input.target.uuid,
       });
       return {
-        message: 'Review outcome reset in the review database.',
+        message: 'Review request reset in the review database.',
         status: 200,
       };
     }
@@ -114,12 +115,12 @@ export function persistReviewOutcome(
       message:
         input.outcome === 'PRG'
           ? 'Approved and saved to the review database.'
-          : `${input.outcome} saved to the review database.`,
+          : `${reviewOutcomeLabel(input.outcome)} saved to the review database.`,
       status: 200,
     };
   } catch (error) {
     if (error instanceof ReviewStoreValidationError) {
-      return { message: 'The review outcome is not valid.', status: 400 };
+      return { message: 'The review request is not valid.', status: 400 };
     }
     if (error instanceof ReviewDatabaseError) {
       return {
@@ -211,7 +212,7 @@ export function loadReviewOutcomesForPaper(
     return {
       destination,
       error:
-        'Review outcomes are unavailable. Check the rtq-review database directory and retry.',
+        'Review requests are unavailable. Check the rtq-review database directory and retry.',
       outcomes: {},
     };
   }

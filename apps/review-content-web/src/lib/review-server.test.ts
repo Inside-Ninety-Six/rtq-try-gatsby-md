@@ -12,7 +12,9 @@ import {
   ReviewRequestError,
 } from './review-server.ts';
 import {
+  REVIEW_OUTCOME_OPTIONS,
   REVIEW_OUTCOMES,
+  SIMPLE_REVIEW_OUTCOME_OPTIONS,
   normalizeSourceRag,
   partitionReviewComments,
   reviewCommentTargetForNode,
@@ -42,6 +44,23 @@ const commentTarget = {
   side: target.side,
   uuid: target.uuid,
 };
+
+test('maps canonical request values to the agreed reviewer-facing labels', () => {
+  assert.deepEqual(
+    REVIEW_OUTCOME_OPTIONS.map(({ label, outcome }) => [outcome, label]),
+    [
+      ['PRG', 'Approved'],
+      ['PRCR', 'Change Requested'],
+      ['PRCC', 'Change Complete'],
+      ['PRBD', 'Marked Blocked'],
+      ['PRCS', 'Coming Soon'],
+    ],
+  );
+  assert.deepEqual(
+    SIMPLE_REVIEW_OUTCOME_OPTIONS.map(({ outcome }) => outcome),
+    ['PRG', 'PRCR'],
+  );
+});
 
 test('normalizes source states and derives only supported sheet routes', () => {
   assert.equal(normalizeSourceRag('NG-4'), 'rag_wf_ng4');
@@ -288,6 +307,25 @@ test('accepts every API outcome and rejects malformed mutation input', () => {
     () => parseReviewOutcomeRequest({ outcome: '', reviewer: 'up', target }),
     ReviewRequestError,
   );
+  for (const retired of [
+    'PRG2',
+    'PRPCC',
+    'PRR',
+    'PRA',
+    'PRPCR',
+    'PRRL',
+    'PRCT',
+  ]) {
+    assert.throws(
+      () =>
+        parseReviewOutcomeRequest({
+          outcome: retired,
+          reviewer: 'up',
+          target,
+        }),
+      ReviewRequestError,
+    );
+  }
   assert.throws(
     () =>
       parseReviewOutcomeRequest({
@@ -415,7 +453,7 @@ test('maps question and answer outcomes and forwards only API-required fields', 
   }
   await forwardReviewOutcome(
     {
-      outcome: 'PRR',
+      outcome: 'PRCR',
       reviewer: 'wf',
       target: { ...target, side: 'answer' },
     },
@@ -449,14 +487,14 @@ test('maps question and answer outcomes and forwards only API-required fields', 
   });
   assert.deepEqual(requests.at(-2), {
     body: {
-      rag: 'PRR',
+      rag: 'PRCR',
       reviewer: 'wf',
       sheet: 'NG3',
       uuid: 'D8AE66C1-9AB8-4C7F-A023-1C17B53237CF',
     },
     url: 'http://review.test/rag',
   });
-  assert.equal(reset.message, 'Review outcome reset in Google Sheets.');
+  assert.equal(reset.message, 'Review request reset in Google Sheets.');
 });
 
 test('returns safe upstream and connection failures', async () => {

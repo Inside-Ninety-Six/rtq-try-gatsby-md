@@ -50,7 +50,7 @@ configure do
 
   set :uuids, all_uuids_dict
 
-  set :review_rags, [:PRCR, :PRPCR, :PRCS, :PRCC, :PRPCC, :PRG, :PRG2, :PRR, :PRA, :PRBD, :PRCT, :PRRL]
+  set :review_rags, [:PRG, :PRCR, :PRCC, :PRBD, :PRCS]
 
   all_toml_rags = [
     "NS",
@@ -614,33 +614,6 @@ helpers do
     logger.info write_range_name
     write_review_rag_value = [[state.to_s]]
     googlesheet_reader.update_values(updated_spreadsheet_id, write_range_name, write_review_rag_value, 'USER_ENTERED')
-
-    # Disable timestamp for reviews as we are not using it for the time being
-    # 
-    # if state != "PRRL"
-    #   current_time = DateTime.now
-    #   date_stamp = current_time.strftime "%Y-%m-%d"
-    #   time_stamp = current_time.strftime "%H:%M"
-
-    #   review_timelines_sheet_name = nil
-
-    #   if request_type == :answer
-    #     review_timelines_sheet_name = "Answers - Reviewers - Timelines"
-    #   else
-    #     review_timelines_sheet_name = "Questions - Reviewers - Timelines"
-    #   end
-
-    #   is_review = "Yes"
-    #   if state == "PRCC" || state == "PRPCC"
-    #     is_review = "No"
-    #   end
-
-    #   logger.info "Sheet:[#{review_timelines_sheet_name}] UUID:[#{uuid}] State:[#{state}]"
-    #   write_range_name = "#{review_timelines_sheet_name}!A2:E10000"
-    #   logger.info write_range_name
-    #   review_timelines_write_value = [[date_stamp, uuid, reviewer.to_s, is_review, state.to_s, time_stamp]]
-    #   googlesheet_reader.append_spreadsheet_value(updated_spreadsheet_id, write_range_name, review_timelines_write_value, 'USER_ENTERED')
-    # end
 
     return "ok"
   end

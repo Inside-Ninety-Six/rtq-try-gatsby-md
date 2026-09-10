@@ -27,6 +27,7 @@ for (const expected of [
   'Add comment',
   'Simple review',
   'Approved',
+  'Change Requested',
   'Reset',
   'S1 Q1',
   'S1 Q5a',
@@ -85,8 +86,8 @@ assert.match(positive.text, /question-node--active/);
 const independentStates = await read(
   `${paperPath}?question-rag=rag_wf_g0&answer-rag=rag_wf_notstarted`,
 );
-assert.match(independentStates.text, /1<!-- --> \/ <!-- -->1<!-- --> matching/);
-assert.match(independentStates.text, /S1 Q21/);
+assert.match(independentStates.text, /1<!-- --> \/ <!-- -->6<!-- --> matching/);
+assert.match(independentStates.text, /S1 Q8/);
 
 const empty = await read(`${paperPath}?family=family.age&frame=frame.algebra`);
 assert.match(empty.text, /No question shares that exact lens/);

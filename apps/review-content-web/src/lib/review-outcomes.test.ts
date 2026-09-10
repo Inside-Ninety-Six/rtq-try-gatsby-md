@@ -113,7 +113,7 @@ test('database mode handles every outcome and reset without an API request', asy
   assert.equal(fetchCalls, 0);
   await submitReviewOutcome(
     {
-      outcome: 'PRR',
+      outcome: 'PRCR',
       reviewer: 'wf',
       target: { ...target, side: 'answer' },
     },
@@ -140,7 +140,7 @@ test('database mode handles every outcome and reset without an API request', asy
   assert.equal(store.repository.get(target)?.outcome, REVIEW_OUTCOMES.at(-1));
   assert.equal(
     store.repository.get({ ...target, side: 'answer' })?.outcome,
-    'PRR',
+    'PRCR',
   );
   assert.equal(
     store.repository.get({ ...target, ragState: 'rag_wf_ng2' })?.outcome,
@@ -160,7 +160,7 @@ test('database mode handles every outcome and reset without an API request', asy
   assert.equal(store.records.size, 2);
   assert.equal(
     store.repository.get({ ...target, side: 'answer' })?.outcome,
-    'PRR',
+    'PRCR',
   );
   assert.equal(
     store.repository.get({ ...target, ragState: 'rag_wf_ng2' })?.outcome,
@@ -198,7 +198,7 @@ test('reload resolves only current question and answer state in database mode', 
     uuid: target.uuid,
   });
   store.repository.set({
-    outcome: 'PRR',
+    outcome: 'PRCR',
     ragState: 'rag_wf_ng2',
     reviewer: 'up',
     side: 'answer',

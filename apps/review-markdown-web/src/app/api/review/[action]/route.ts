@@ -1,3 +1,8 @@
+import {
+  ReviewOutcomeRequestError,
+  isReviewOutcomeAction,
+  parseReviewOutcomeRequestBody,
+} from '@/lib/review-outcomes';
 import { reviewApiBaseUrl } from '@/lib/rtq-review-config';
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +36,18 @@ export async function POST(request: Request, { params }: ReviewRouteContext) {
     );
   }
 
-  const body = await request.text();
+  let body = await request.text();
+
+  if (isReviewOutcomeAction(action)) {
+    try {
+      body = parseReviewOutcomeRequestBody(body);
+    } catch (error) {
+      if (error instanceof ReviewOutcomeRequestError) {
+        return Response.json({ reason: error.message }, { status: 400 });
+      }
+      throw error;
+    }
+  }
 
   try {
     const upstreamResponse = await fetch(

@@ -281,7 +281,6 @@ describe("documentation ownership registry", () => {
 
     assert.deepEqual(missing, [
       "rtq-content/docs",
-      "rtq-review/docs",
       "rtq-review/apps/review-api/docs",
       "rtq-review/apps/review-legacy-gatsby-web/docs",
       "rtq-review/apps/review-question-viewer-web/docs",

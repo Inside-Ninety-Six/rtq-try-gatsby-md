@@ -845,8 +845,7 @@ html[data-rtq-controls-visible='false'] .rtq-document p.review_status {
   );
 }
 
-.rtq-document .question_envelope.question.rag_red,
-.rtq-document .question_envelope.question.rag_prr {
+.rtq-document .question_envelope.question.rag_red {
   background: linear-gradient(
     180deg,
     rgba(255, 241, 239, 0.96),
@@ -854,8 +853,7 @@ html[data-rtq-controls-visible='false'] .rtq-document p.review_status {
   );
 }
 
-.rtq-document .question_envelope.question.rag_prcr,
-.rtq-document .question_envelope.question.rag_prpcr {
+.rtq-document .question_envelope.question.rag_prcr {
   background: linear-gradient(
     180deg,
     rgba(255, 249, 233, 0.96),
@@ -871,8 +869,7 @@ html[data-rtq-controls-visible='false'] .rtq-document p.review_status {
   );
 }
 
-.rtq-document .question_envelope.question.rag_prcc,
-.rtq-document .question_envelope.question.rag_prrl {
+.rtq-document .question_envelope.question.rag_prcc {
   background: linear-gradient(
     180deg,
     rgba(238, 250, 248, 0.96),
@@ -881,7 +878,6 @@ html[data-rtq-controls-visible='false'] .rtq-document p.review_status {
 }
 
 .rtq-document .question_envelope.question.rag_prg,
-.rtq-document .question_envelope.question.rag_prg2,
 .rtq-document .question_envelope.question.rag_g0,
 .rtq-document .question_envelope.question.rag_g1,
 .rtq-document .question_envelope.question.rag_g2,
@@ -1042,14 +1038,12 @@ button.rag_prcc {
   color: #083344;
 }
 
-button.rag_prg,
-button.rag_prg2 {
+button.rag_prg {
   background: #04aa6d;
   color: white;
 }
 
-button.rag_prcr,
-button.rag_prpcr {
+button.rag_prcr {
   color: #2a2100;
 }
 
@@ -1064,34 +1058,15 @@ button.rag_prcr {
   background: yellow;
 }
 
-button.rag_prpcr {
-  background: tomato;
-  color: white;
-}
-
-button.rag_prrl,
-button.rag_prct {
-  color: white;
-}
-
-button.rag_prrl {
-  background: orange;
-  color: #3b2200;
-}
-
 button.rag_prbd {
   background: chocolate;
   color: white;
 }
 
-button.rag_prr {
-  background: red;
-  color: white;
-}
-
-button.rag_prct {
-  background: grey;
-  color: white;
+button.reset_review {
+  background: #ede9df;
+  border: 1px solid var(--line);
+  color: #1e1c18;
 }
 
 form.review textarea {

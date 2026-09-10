@@ -94,10 +94,12 @@ the browser and does not read TOML or contact Google Sheets.
   review sides are independent, so answer-only and question-only layouts are
   supported. Display preferences stay in local browser storage and existing
   combined review-panel preferences migrate to the two switches.
-- Use the persistent **Simple review** switch to choose between the two-action
-  **Approved**/**Reset** controls and the advanced set of review outcomes.
-  Approved submits `PRG`; Reset clears only the state-scoped outcome in the
-  configured destination and never removes SQLite feedback.
+- Use the persistent **Simple review** switch to choose between **Approved**,
+  **Change Requested**, and **Reset**, or the complete descriptive request set.
+  Detailed mode adds **Change Complete**, **Marked Blocked**, and **Coming
+  Soon**. The interface never requires reviewers to interpret internal PR
+  codes. Reset clears only the state-scoped request in the configured
+  destination and never removes SQLite feedback.
 - Rendered workings follow the production RTQ hierarchy: formulas and tips use
   labelled rows, later methods have their own divider, and authored
   `WorkingSection` stages retain their titles and connected side rail. Hidden
@@ -122,6 +124,12 @@ store; a reload displays only an exact current-state match. Reset clears only
 that match. In `google-sheets` mode, the existing local `review-api` forwarding,
 sheet routing, and TOML-backed display remain unchanged. Both modes retain the
 same live identity and content-state validation before writing.
+
+Both destinations accept only the canonical actionable requests: `PRG`,
+`PRCR`, `PRCC`, `PRBD`, and `PRCS`. Retired aliases and outcomes are rejected at
+the application boundary. A missing request is the `PRNS` default; the UI
+represents that state through Reset rather than submitting `PRNS` as another
+transition trigger.
 
 Comments never call `review-api`. They are appended through Drizzle to
 `<rtq-review>/database/review-content.sqlite`. Every question, subquestion, and

@@ -2,6 +2,11 @@
 
 `rtq-review` is the private pnpm workspace for RTQ's internal review tools.
 
+The living [review outcome workflow](docs/architecture/review-outcome-workflow.md)
+documents how a state-scoped decision moves from Review Content Web through the
+shared database and into canonical paper TOML during an operator-controlled
+sync.
+
 All review renderers share the authoring meanings and conformance inventory in
 the canonical
 [RTQ KaTeX Semantic Colour Architecture](https://github.com/Read-The-Question/rtq-web/blob/develop/apps/web/docs/architecture/design-system/katex-semantic-colours.md).
@@ -19,9 +24,9 @@ maths-colour macro catalogue.
 - [`apps/review-content-web`](apps/review-content-web) is the direct-content
   Next.js reviewer and the primary review application. It reads paper TOML
   from the active `rtq-content` checkout without generated Markdown, submits
-  outcomes to Google Sheets through `review-api`, and keeps append-only
-  comments in the versioned `database/review-content.sqlite` database in this
-  repository.
+  outcomes to the configured shared-database or retained Google Sheets
+  destination, and keeps append-only comments in the versioned
+  `database/review-content.sqlite` database in this repository.
 - [`apps/review-markdown-web`](apps/review-markdown-web) is the maintained
   Next.js application for reviewing generated paper Markdown and submitting
   review actions.
@@ -60,10 +65,11 @@ use OR matching within an axis and AND matching across axes. Question and
 answer RAG-state filters are independent. Filter state is encoded in the URL,
 while display preferences are remembered in browser storage; Reset filters
 clears both. Source TOML remains read-only: review outcomes go to Google Sheets
-through Review API, while contextual append-only comments go to the local
-SQLite database. The main database is committed with `rtq-review` so its
-feedback can be read on other machines; SQLite journal, WAL, and SHM sidecars
-remain ignored.
+through Review API or to the shared database according to the exclusive
+`RTQ_REVIEW_OUTCOME_DESTINATION` setting, while contextual append-only comments
+go to the SQLite database. The main database is committed with `rtq-review` so
+its feedback can be read on other machines; SQLite journal, WAL, and SHM
+sidecars remain ignored.
 
 Run an application from the workspace root on its assigned port:
 

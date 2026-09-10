@@ -7,20 +7,7 @@ export type {
   ReviewTargetIdentity,
 } from '@rtq/review-store/types';
 
-export const REVIEW_OUTCOMES = [
-  'PRCC',
-  'PRPCC',
-  'PRG',
-  'PRG2',
-  'PRCR',
-  'PRPCR',
-  'PRCS',
-  'PRRL',
-  'PRR',
-  'PRA',
-  'PRBD',
-  'PRCT',
-] as const;
+export const REVIEW_OUTCOMES = ['PRG', 'PRCR', 'PRCC', 'PRBD', 'PRCS'] as const;
 
 export const REVIEW_SHEET_CODES = [
   'NS',
@@ -37,6 +24,23 @@ export const REVIEW_SHEET_CODES = [
 ] as const;
 
 export type ReviewOutcome = (typeof REVIEW_OUTCOMES)[number];
+
+export const REVIEW_OUTCOME_OPTIONS = [
+  { label: 'Approved', outcome: 'PRG', tone: 'approved' },
+  { label: 'Change Requested', outcome: 'PRCR', tone: 'change-requested' },
+  { label: 'Change Complete', outcome: 'PRCC', tone: 'change-complete' },
+  { label: 'Marked Blocked', outcome: 'PRBD', tone: 'blocked' },
+  { label: 'Coming Soon', outcome: 'PRCS', tone: 'coming-soon' },
+] as const satisfies readonly {
+  label: string;
+  outcome: ReviewOutcome;
+  tone: string;
+}[];
+
+export const SIMPLE_REVIEW_OUTCOME_OPTIONS = REVIEW_OUTCOME_OPTIONS.filter(
+  ({ outcome }) => outcome === 'PRG' || outcome === 'PRCR',
+);
+
 export type ReviewOutcomeSelection = ReviewOutcome | null;
 export type ReviewOutcomeDestination = 'database' | 'google-sheets';
 export type ReviewOutcomeLoad = Readonly<{
@@ -71,6 +75,11 @@ export function isReviewOutcome(value: unknown): value is ReviewOutcome {
     typeof value === 'string' &&
     (REVIEW_OUTCOMES as readonly string[]).includes(value)
   );
+}
+
+export function reviewOutcomeLabel(outcome: ReviewOutcome): string {
+  return REVIEW_OUTCOME_OPTIONS.find((option) => option.outcome === outcome)!
+    .label;
 }
 
 export function isReviewSide(value: unknown): value is ReviewSide {
