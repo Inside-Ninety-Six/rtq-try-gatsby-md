@@ -5,6 +5,7 @@ import {
   DEFAULT_REVIEW_PREFERENCES,
   INITIAL_REVIEW_PREFERENCES_KEY,
   LEGACY_REVIEW_PREFERENCES_KEY,
+  PREVIOUS_REVIEW_PREFERENCES_KEY,
   REVIEW_PREFERENCES_KEY,
   adjacentQuestionId,
   collectionRoute,
@@ -14,8 +15,12 @@ import {
   visibleReviewSides,
 } from './review-view-model.ts';
 
-test('display preference storage is versioned for review control mode', () => {
-  assert.equal(REVIEW_PREFERENCES_KEY, 'rtq.review-content.preferences.v3');
+test('display preference storage is versioned for review status treatments', () => {
+  assert.equal(REVIEW_PREFERENCES_KEY, 'rtq.review-content.preferences.v4');
+  assert.equal(
+    PREVIOUS_REVIEW_PREFERENCES_KEY,
+    'rtq.review-content.preferences.v3',
+  );
   assert.equal(
     LEGACY_REVIEW_PREFERENCES_KEY,
     'rtq.review-content.preferences.v2',
@@ -38,12 +43,15 @@ test('preferences survive partial and malformed local values', () => {
   });
 });
 
-test('preferences migrate the former combined review visibility', () => {
+test('preferences migrate the former settings into the answer-first review default', () => {
   assert.deepEqual(
-    parseReviewPreferences(null, '{"showReview":false,"showRaw":true}'),
+    parseReviewPreferences(
+      null,
+      '{"showQuestionReview":true,"showAnswerReview":true,"showRaw":true}',
+    ),
     {
       ...DEFAULT_REVIEW_PREFERENCES,
-      showAnswerReview: false,
+      showAnswerReview: true,
       showQuestionReview: false,
       showRaw: true,
     },
@@ -51,6 +59,7 @@ test('preferences migrate the former combined review visibility', () => {
   assert.deepEqual(
     parseReviewPreferences(
       '{"showAnswerReview":true,"showQuestionReview":false}',
+      null,
       '{"showReview":true}',
     ),
     {
@@ -72,6 +81,7 @@ test('review controls default to simple and preserve an advanced selection', () 
     parseReviewPreferences(
       null,
       '{"reviewControlMode":"advanced"}',
+      null,
       '{"showReview":false}',
     ).reviewControlMode,
     'advanced',
@@ -79,23 +89,21 @@ test('review controls default to simple and preserve an advanced selection', () 
 });
 
 test('review sides support both, question-only, answer-only, and neither', () => {
-  assert.deepEqual(visibleReviewSides(DEFAULT_REVIEW_PREFERENCES), [
-    'question',
-    'answer',
-  ]);
+  assert.deepEqual(visibleReviewSides(DEFAULT_REVIEW_PREFERENCES), ['answer']);
   assert.deepEqual(
     visibleReviewSides({
       ...DEFAULT_REVIEW_PREFERENCES,
-      showAnswerReview: false,
+      showQuestionReview: true,
     }),
-    ['question'],
+    ['answer', 'question'],
   );
   assert.deepEqual(
     visibleReviewSides({
       ...DEFAULT_REVIEW_PREFERENCES,
-      showQuestionReview: false,
+      showAnswerReview: false,
+      showQuestionReview: true,
     }),
-    ['answer'],
+    ['question'],
   );
   assert.deepEqual(
     visibleReviewSides({

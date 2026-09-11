@@ -33,6 +33,7 @@ import {
   DEFAULT_REVIEW_PREFERENCES,
   INITIAL_REVIEW_PREFERENCES_KEY,
   LEGACY_REVIEW_PREFERENCES_KEY,
+  PREVIOUS_REVIEW_PREFERENCES_KEY,
   REVIEW_PREFERENCES_KEY,
   adjacentQuestionId,
   collectionRoute,
@@ -168,6 +169,61 @@ type ReviewActionStatus = Readonly<{
   kind: 'error' | 'idle' | 'success';
   message: string;
 }>;
+
+type ReviewStatusTone = 'pending' | ReturnType<typeof reviewOutcomeTone>;
+
+type ReviewStatusRail = Readonly<{
+  outcome: ReviewOutcomeSelection | undefined;
+  side: ReviewSide;
+  tone: ReviewStatusTone;
+}>;
+
+const REVIEW_STATUS_PRIORITY: Readonly<Record<ReviewStatusTone, number>> = {
+  approved: 0,
+  'coming-soon': 1,
+  pending: 2,
+  'change-complete': 3,
+  'change-requested': 4,
+  blocked: 5,
+};
+
+function reviewStatusTone(
+  outcome: ReviewOutcomeSelection | undefined,
+): ReviewStatusTone {
+  return outcome ? reviewOutcomeTone(outcome) : 'pending';
+}
+
+function reviewStatusRails(
+  node: DisplayPaperNode,
+  preferences: ReviewPreferences,
+  runtime: ReviewRuntimeState,
+): readonly ReviewStatusRail[] {
+  if (node.depth !== 0) return [];
+  return visibleReviewSides(preferences).flatMap((side) => {
+    if (!reviewTargetForNode(node, side, runtime.source)) return [];
+    const outcome = displayedReviewOutcome(
+      node,
+      side,
+      runtime.source,
+      runtime.outcomeDestination,
+      runtime.outcomeOverrides,
+    );
+    return [{ outcome, side, tone: reviewStatusTone(outcome) }];
+  });
+}
+
+function dominantReviewStatusTone(
+  rails: readonly ReviewStatusRail[],
+): ReviewStatusTone | undefined {
+  return rails.reduce<ReviewStatusTone | undefined>(
+    (dominant, rail) =>
+      !dominant ||
+      REVIEW_STATUS_PRIORITY[rail.tone] > REVIEW_STATUS_PRIORITY[dominant]
+        ? rail.tone
+        : dominant,
+    undefined,
+  );
+}
 
 function utcDateTime(value: string): string {
   const parsed = new Date(value);
@@ -802,14 +858,12 @@ function SolutionContent({
 }
 
 function QuestionNode({
-  active,
   matchingNodeIds,
   node,
   preferences,
   reviewRuntime,
   topLevelQuestion,
 }: {
-  active: boolean;
   matchingNodeIds: ReadonlySet<string>;
   node: DisplayPaperNode;
   preferences: ReviewPreferences;
@@ -817,13 +871,33 @@ function QuestionNode({
   topLevelQuestion: DisplayPaperNode;
 }) {
   const exactMatch = matchingNodeIds.has(node.id);
+  const statusRails = reviewStatusRails(node, preferences, reviewRuntime);
+  const backgroundTone = preferences.showStatusBackground
+    ? dominantReviewStatusTone(statusRails)
+    : undefined;
   return (
     <article
       className={`question-node question-node--depth-${node.depth}${
-        active && node.depth === 0 ? ' question-node--active' : ''
-      }${exactMatch ? '' : ' question-node--context'}`}
+        exactMatch ? '' : ' question-node--context'
+      }${statusRails.length > 0 ? ' question-node--with-status-rails' : ''}${
+        backgroundTone
+          ? ` question-node--status-background-${backgroundTone}`
+          : ''
+      }`}
       id={`question-${node.id}`}
     >
+      {statusRails.length > 0 ? (
+        <div className="question-status-rails" aria-hidden="true">
+          {statusRails.map(({ side, tone }) => (
+            <span
+              className={`question-status-rail question-status-rail--${tone}`}
+              key={side}
+            >
+              <span>{side === 'answer' ? 'A' : 'Q'}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
       <header className="question-heading">
         <div className="question-heading-main">
           <div className="question-label">
@@ -831,7 +905,11 @@ function QuestionNode({
             <h3>{node.label}</h3>
           </div>
           {node.depth === 0 ? (
-            <QuestionReviewActivity node={node} runtime={reviewRuntime} />
+            <QuestionReviewActivity
+              node={node}
+              runtime={reviewRuntime}
+              statusRails={statusRails}
+            />
           ) : null}
         </div>
         <div className="question-identifiers">
@@ -864,7 +942,6 @@ function QuestionNode({
         <div className="nested-questions">
           {node.children.map((child) => (
             <QuestionNode
-              active={active}
               key={child.id}
               matchingNodeIds={matchingNodeIds}
               node={child}
@@ -882,29 +959,17 @@ function QuestionNode({
 function QuestionReviewActivity({
   node,
   runtime,
+  statusRails,
 }: {
   node: DisplayPaperNode;
   runtime: ReviewRuntimeState;
+  statusRails: readonly ReviewStatusRail[];
 }) {
-  const activity = (['question', 'answer'] as const).flatMap((side) => {
+  const activity = statusRails.flatMap(({ outcome, side, tone }) => {
     const target = reviewTargetForNode(node, side, runtime.source);
     if (!target) return [];
-    const outcome = displayedReviewOutcome(
-      node,
-      side,
-      runtime.source,
-      runtime.outcomeDestination,
-      runtime.outcomeOverrides,
-    );
     const commentGroups = partitionReviewComments(runtime.comments, target);
-    if (
-      !outcome &&
-      commentGroups.current.length === 0 &&
-      (!runtime.showPreviousFeedback || commentGroups.history.length === 0)
-    ) {
-      return [];
-    }
-    return [{ commentGroups, outcome, side }];
+    return [{ commentGroups, outcome, side, tone }];
   });
   if (activity.length === 0) return null;
 
@@ -914,16 +979,14 @@ function QuestionReviewActivity({
       aria-label="Current review activity"
       aria-live="polite"
     >
-      {activity.map(({ commentGroups, outcome, side }) => (
+      {activity.map(({ commentGroups, outcome, side, tone }) => (
         <div className="question-review-activity-side" key={side}>
-          {outcome ? (
-            <span
-              className={`review-activity-badge review-activity-badge--${reviewOutcomeTone(outcome)}`}
-            >
-              {side === 'question' ? 'Question' : 'Answer'} ·{' '}
-              {reviewOutcomeLabel(outcome)}
-            </span>
-          ) : null}
+          <span
+            className={`review-activity-badge review-activity-badge--${tone}`}
+          >
+            {side === 'question' ? 'Question' : 'Answer'} ·{' '}
+            {outcome ? reviewOutcomeLabel(outcome) : 'Pending'}
+          </span>
           {commentGroups.current.length > 0 ? (
             <span className="review-feedback-badge">
               {side === 'question' ? 'Question' : 'Answer'} feedback ·{' '}
@@ -1558,6 +1621,7 @@ export function ReviewSurface({
         const stored = localStorage.getItem(REVIEW_PREFERENCES_KEY);
         next = parseReviewPreferences(
           stored,
+          localStorage.getItem(PREVIOUS_REVIEW_PREFERENCES_KEY),
           localStorage.getItem(LEGACY_REVIEW_PREFERENCES_KEY),
           localStorage.getItem(INITIAL_REVIEW_PREFERENCES_KEY),
         );
@@ -1900,6 +1964,13 @@ export function ReviewSurface({
             label="Answer review"
             onChange={(value) => updatePreference('showAnswerReview', value)}
           />
+          <PreferenceToggle
+            checked={preferences.showStatusBackground}
+            label="Status background"
+            onChange={(value) =>
+              updatePreference('showStatusBackground', value)
+            }
+          />
         </div>
         {visibleReviewSides(preferences).length > 0 ? (
           <>
@@ -1978,7 +2049,6 @@ export function ReviewSurface({
                   const displayQuestion = displayNodeById.get(question.id);
                   return displayQuestion ? (
                     <QuestionNode
-                      active={displayQuestion.id === activeId}
                       key={displayQuestion.id}
                       matchingNodeIds={matchingNodeIds}
                       node={displayQuestion}

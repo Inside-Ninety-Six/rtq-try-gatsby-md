@@ -1,4 +1,6 @@
-export const REVIEW_PREFERENCES_KEY = 'rtq.review-content.preferences.v3';
+export const REVIEW_PREFERENCES_KEY = 'rtq.review-content.preferences.v4';
+export const PREVIOUS_REVIEW_PREFERENCES_KEY =
+  'rtq.review-content.preferences.v3';
 export const LEGACY_REVIEW_PREFERENCES_KEY =
   'rtq.review-content.preferences.v2';
 export const INITIAL_REVIEW_PREFERENCES_KEY =
@@ -12,15 +14,17 @@ export type ReviewPreferences = Readonly<{
   showQuestionReview: boolean;
   showRaw: boolean;
   showSolutions: boolean;
+  showStatusBackground: boolean;
   showTags: boolean;
 }>;
 
 export const DEFAULT_REVIEW_PREFERENCES: ReviewPreferences = {
   reviewControlMode: 'simple',
   showAnswerReview: true,
-  showQuestionReview: true,
+  showQuestionReview: false,
   showRaw: false,
   showSolutions: true,
+  showStatusBackground: false,
   showTags: true,
 };
 
@@ -42,29 +46,35 @@ function parsePreferenceRecord(
 
 export function parseReviewPreferences(
   value: string | null,
+  previousValue: string | null = null,
   legacyValue: string | null = null,
   initialValue: string | null = null,
 ): ReviewPreferences {
   const parsed = parsePreferenceRecord(value);
+  const previous = parsePreferenceRecord(previousValue);
   const legacy = parsePreferenceRecord(legacyValue);
   const initial = parsePreferenceRecord(initialValue);
   const oldReviewPreference =
     typeof parsed?.showReview === 'boolean'
       ? parsed.showReview
-      : typeof legacy?.showReview === 'boolean'
-        ? legacy.showReview
-        : typeof initial?.showReview === 'boolean'
-          ? initial.showReview
-          : undefined;
+      : typeof previous?.showReview === 'boolean'
+        ? previous.showReview
+        : typeof legacy?.showReview === 'boolean'
+          ? legacy.showReview
+          : typeof initial?.showReview === 'boolean'
+            ? initial.showReview
+            : undefined;
 
   function preference(
     key: keyof ReviewPreferences,
     fallback: boolean,
   ): boolean {
     const currentPreference = parsed?.[key];
+    const previousPreference = previous?.[key];
     const legacyPreference = legacy?.[key];
     const initialPreference = initial?.[key];
     if (typeof currentPreference === 'boolean') return currentPreference;
+    if (typeof previousPreference === 'boolean') return previousPreference;
     if (typeof legacyPreference === 'boolean') return legacyPreference;
     if (typeof initialPreference === 'boolean') return initialPreference;
     return fallback;
@@ -72,6 +82,7 @@ export function parseReviewPreferences(
 
   const requestedControlMode =
     parsed?.reviewControlMode ??
+    previous?.reviewControlMode ??
     legacy?.reviewControlMode ??
     initial?.reviewControlMode;
 
@@ -84,14 +95,18 @@ export function parseReviewPreferences(
       'showAnswerReview',
       oldReviewPreference ?? DEFAULT_REVIEW_PREFERENCES.showAnswerReview,
     ),
-    showQuestionReview: preference(
-      'showQuestionReview',
-      oldReviewPreference ?? DEFAULT_REVIEW_PREFERENCES.showQuestionReview,
-    ),
+    showQuestionReview:
+      typeof parsed?.showQuestionReview === 'boolean'
+        ? parsed.showQuestionReview
+        : DEFAULT_REVIEW_PREFERENCES.showQuestionReview,
     showRaw: preference('showRaw', DEFAULT_REVIEW_PREFERENCES.showRaw),
     showSolutions: preference(
       'showSolutions',
       DEFAULT_REVIEW_PREFERENCES.showSolutions,
+    ),
+    showStatusBackground: preference(
+      'showStatusBackground',
+      DEFAULT_REVIEW_PREFERENCES.showStatusBackground,
     ),
     showTags: preference('showTags', DEFAULT_REVIEW_PREFERENCES.showTags),
   };
@@ -101,8 +116,8 @@ export function visibleReviewSides(
   preferences: ReviewPreferences,
 ): readonly VisibleReviewSide[] {
   const sides: VisibleReviewSide[] = [];
-  if (preferences.showQuestionReview) sides.push('question');
   if (preferences.showAnswerReview) sides.push('answer');
+  if (preferences.showQuestionReview) sides.push('question');
   return sides;
 }
 

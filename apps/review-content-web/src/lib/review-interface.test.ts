@@ -25,6 +25,7 @@ test('display preferences use accessible switches and independent review sides',
   assert.match(component, /role="switch"/);
   assert.match(component, /label="Question review"/);
   assert.match(component, /label="Answer review"/);
+  assert.match(component, /label="Status background"/);
   assert.match(component, /label="Simple review"/);
   assert.match(component, /label="Show previous feedback"/);
   assert.doesNotMatch(component, /label="Review panel"/);
@@ -88,6 +89,17 @@ test('top-level questions expose current outcomes and feedback as scan badges', 
   assert.match(component, /reviewOutcomeLabel\(outcome\)/);
   assert.match(component, /commentGroups\.current\.length/);
   assert.match(component, /runtime\.showPreviousFeedback/);
+  assert.match(component, /function reviewStatusRails/);
+  assert.match(component, /question-status-rail--\$\{tone\}/);
+  assert.match(component, /side === 'answer' \? 'A' : 'Q'/);
+  assert.match(
+    component,
+    /question-node--status-background-\$\{backgroundTone\}/,
+  );
+  assert.match(
+    component,
+    /outcome \? reviewOutcomeLabel\(outcome\) : 'Pending'/,
+  );
   assert.match(css, /--review-approved-background:/);
   assert.match(css, /--review-change-requested-background:/);
   assert.match(css, /--review-change-complete-background:/);
@@ -97,6 +109,11 @@ test('top-level questions expose current outcomes and feedback as scan badges', 
     css,
     /\.review-activity-badge\s*{[^}]*background:\s*var\(--review-option-background/s,
   );
+  assert.match(css, /\.question-status-rail--approved\s*{/);
+  assert.match(css, /\.question-status-rail--pending\s*{/);
+  assert.match(css, /\.question-node--status-background-blocked\s*{/);
+  assert.doesNotMatch(component, /question-node--active/);
+  assert.doesNotMatch(css, /\.question-node--active/);
 });
 
 test('the sticky toolbar keeps compact filter access with focus and return controls', async () => {
