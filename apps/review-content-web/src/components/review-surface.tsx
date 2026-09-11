@@ -60,6 +60,7 @@ import {
   type ReviewCommentLoad,
   type ReviewOutcomeDestination,
   type ReviewOutcomeLoad,
+  type ReviewOutcome,
   type ReviewOutcomeSelection,
   type ReviewSide,
   type ReviewTargetDescriptor,
@@ -170,6 +171,30 @@ type ReviewActionStatus = Readonly<{
   message: string;
 }>;
 
+type ReviewCursor = Readonly<{
+  node: DisplayPaperNode;
+  topLevelQuestion: DisplayPaperNode;
+}>;
+
+type KeyboardCommentDialogState = Readonly<{
+  nodeLabel: string;
+  side: ReviewSide;
+  target: ReviewTargetDescriptor;
+  topLevelLabel: string;
+}>;
+
+function flattenReviewCursors(
+  node: DisplayPaperNode,
+  topLevelQuestion: DisplayPaperNode = node,
+): readonly ReviewCursor[] {
+  return [
+    { node, topLevelQuestion },
+    ...node.children.flatMap((child) =>
+      flattenReviewCursors(child, topLevelQuestion),
+    ),
+  ];
+}
+
 type ReviewStatusTone = 'pending' | ReturnType<typeof reviewOutcomeTone>;
 
 type ReviewStatusRail = Readonly<{
@@ -195,21 +220,19 @@ function reviewStatusTone(
 
 function reviewStatusRails(
   node: DisplayPaperNode,
-  preferences: ReviewPreferences,
+  reviewSide: ReviewSide,
   runtime: ReviewRuntimeState,
 ): readonly ReviewStatusRail[] {
   if (node.depth !== 0) return [];
-  return visibleReviewSides(preferences).flatMap((side) => {
-    if (!reviewTargetForNode(node, side, runtime.source)) return [];
-    const outcome = displayedReviewOutcome(
-      node,
-      side,
-      runtime.source,
-      runtime.outcomeDestination,
-      runtime.outcomeOverrides,
-    );
-    return [{ outcome, side, tone: reviewStatusTone(outcome) }];
-  });
+  if (!reviewTargetForNode(node, reviewSide, runtime.source)) return [];
+  const outcome = displayedReviewOutcome(
+    node,
+    reviewSide,
+    runtime.source,
+    runtime.outcomeDestination,
+    runtime.outcomeOverrides,
+  );
+  return [{ outcome, side: reviewSide, tone: reviewStatusTone(outcome) }];
 }
 
 function dominantReviewStatusTone(
@@ -861,17 +884,19 @@ function QuestionNode({
   matchingNodeIds,
   node,
   preferences,
+  reviewSide,
   reviewRuntime,
   topLevelQuestion,
 }: {
   matchingNodeIds: ReadonlySet<string>;
   node: DisplayPaperNode;
   preferences: ReviewPreferences;
+  reviewSide: ReviewSide;
   reviewRuntime: ReviewRuntimeState;
   topLevelQuestion: DisplayPaperNode;
 }) {
   const exactMatch = matchingNodeIds.has(node.id);
-  const statusRails = reviewStatusRails(node, preferences, reviewRuntime);
+  const statusRails = reviewStatusRails(node, reviewSide, reviewRuntime);
   const backgroundTone = preferences.showStatusBackground
     ? dominantReviewStatusTone(statusRails)
     : undefined;
@@ -946,6 +971,7 @@ function QuestionNode({
               matchingNodeIds={matchingNodeIds}
               node={child}
               preferences={preferences}
+              reviewSide={reviewSide}
               reviewRuntime={reviewRuntime}
               topLevelQuestion={topLevelQuestion}
             />
@@ -1209,19 +1235,25 @@ function FilterPanel({
 }
 
 function QuestionIndexNode({
+  currentNodeId,
   matchingNodeIds,
   node,
 }: {
+  currentNodeId: string | undefined;
   matchingNodeIds: ReadonlySet<string>;
   node: ReviewPaperNode;
 }) {
   const exactMatch = matchingNodeIds.has(node.id);
+  const current = currentNodeId === node.id;
   return (
     <li
       className={`question-index-item question-index-item--depth-${node.depth}`}
     >
       <a
-        className={exactMatch ? 'question-index-link--match' : undefined}
+        aria-current={current ? 'true' : undefined}
+        className={`${exactMatch ? 'question-index-link--match' : ''}${
+          current ? ' question-index-link--current' : ''
+        }`}
         href={`#question-${node.id}`}
       >
         <span>{node.label}</span>
@@ -1231,6 +1263,7 @@ function QuestionIndexNode({
         <ol>
           {node.children.map((child) => (
             <QuestionIndexNode
+              currentNodeId={currentNodeId}
               key={child.id}
               matchingNodeIds={matchingNodeIds}
               node={child}
@@ -1243,14 +1276,31 @@ function QuestionIndexNode({
 }
 
 function PaperQuestionIndex({
+  currentNodeId,
   matchingNodeIds,
   sections,
 }: {
+  currentNodeId: string | undefined;
   matchingNodeIds: ReadonlySet<string>;
   sections: ReturnType<typeof filterReviewPaper>['matchingSections'];
 }) {
+  const indexRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      indexRef.current
+        ?.querySelector<HTMLElement>('[aria-current="true"]')
+        ?.scrollIntoView({ block: 'nearest' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [currentNodeId]);
+
   return (
-    <aside className="question-index" aria-label="Filtered question navigation">
+    <aside
+      className="question-index"
+      aria-label="Filtered question navigation"
+      ref={indexRef}
+    >
       <span>Questions</span>
       {sections.map((section) => (
         <section className="question-index-section" key={section.id}>
@@ -1261,6 +1311,7 @@ function PaperQuestionIndex({
           <ol>
             {section.questions.map((question) => (
               <QuestionIndexNode
+                currentNodeId={currentNodeId}
                 key={question.id}
                 matchingNodeIds={matchingNodeIds}
                 node={question}
@@ -1408,6 +1459,17 @@ export function ReviewSurface({
     { state: 'current' },
   );
   const [sourceFreshnessChecking, setSourceFreshnessChecking] = useState(false);
+  const [currentNodeId, setCurrentNodeId] = useState<string>();
+  const [keyboardSide, setKeyboardSide] = useState<ReviewSide>('answer');
+  const [keyboardStatus, setKeyboardStatus] = useState<ReviewActionStatus>({
+    kind: 'idle',
+    message: '',
+  });
+  const [commentDialog, setCommentDialog] =
+    useState<KeyboardCommentDialogState>();
+  const [commentDraft, setCommentDraft] = useState('');
+  const keyboardCommentSubmissionId = useRef<string | undefined>(undefined);
+  const toolbarRef = useRef<HTMLElement>(null);
   const pendingRequestKeys = useRef(new Set<string>());
   const sourceFreshnessPending = useRef(false);
   const selection = useMemo(
@@ -1462,6 +1524,44 @@ export function ReviewSurface({
   const activeId = result.matchingQuestionTreeIds.includes(activeFromUrl ?? '')
     ? activeFromUrl
     : result.matchingQuestionTreeIds[0];
+  const reviewCursors = useMemo(
+    () =>
+      result.matchingQuestionTreeIds.flatMap((id) => {
+        const question = displayNodeById.get(id);
+        return question ? flattenReviewCursors(question) : [];
+      }),
+    [displayNodeById, result.matchingQuestionTreeIds],
+  );
+  const reviewCursorById = useMemo(
+    () => new Map(reviewCursors.map((cursor) => [cursor.node.id, cursor])),
+    [reviewCursors],
+  );
+  const currentCursor =
+    reviewCursorById.get(currentNodeId ?? '') ??
+    reviewCursorById.get(activeId ?? '') ??
+    reviewCursors[0];
+  const navigationActiveId = currentCursor?.topLevelQuestion.id ?? activeId;
+  const keyboardOutcomeTarget =
+    currentCursor && keyboardSide
+      ? reviewTargetForNode(currentCursor.topLevelQuestion, keyboardSide, {
+          collectionId: paper.source.collection.id,
+          relativePath: paper.source.relativePath,
+        })
+      : undefined;
+  const keyboardOutcomeDisabledReason = !keyboardOutcomeTarget
+    ? 'The current question does not have a reviewable UUID and RAG state.'
+    : outcomeLoad.error
+      ? outcomeLoad.error
+      : outcomeLoad.destination === 'google-sheets' &&
+          !keyboardOutcomeTarget.sheet
+        ? `Source state ${reviewStateLabel(keyboardOutcomeTarget.ragState)} has no Google Sheets route.`
+        : undefined;
+  const keyboardOutcomePending = keyboardOutcomeTarget
+    ? pendingKeys.has(`${reviewTargetKey(keyboardOutcomeTarget)}:outcome`)
+    : false;
+  const keyboardCommentPending = commentDialog
+    ? pendingKeys.has(`${reviewTargetKey(commentDialog.target)}:comment`)
+    : false;
   const matchingNodeIds = useMemo(
     () => new Set(result.matchingNodeIds),
     [result.matchingNodeIds],
@@ -1658,6 +1758,89 @@ export function ReviewSurface({
       ?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, [activeFromUrl, activeId]);
 
+  useEffect(() => {
+    let frame: number | undefined;
+
+    function updateStickyRailOffset() {
+      const toolbarHeight = toolbarRef.current?.getBoundingClientRect().height;
+      if (toolbarHeight) {
+        document.documentElement.style.setProperty(
+          '--review-toolbar-offset',
+          `${Math.ceil(toolbarHeight) + 16}px`,
+        );
+      }
+    }
+
+    function updateCurrentCursor() {
+      if (frame !== undefined) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const toolbarBottom =
+          document
+            .querySelector<HTMLElement>('.review-toolbar')
+            ?.getBoundingClientRect().bottom ?? 0;
+        const readingLine = Math.min(
+          window.innerHeight - 1,
+          toolbarBottom +
+            Math.min(200, Math.max(140, window.innerHeight * 0.2)),
+        );
+        const positioned = reviewCursors.flatMap((cursor) => {
+          const element = document.getElementById(`question-${cursor.node.id}`);
+          if (!element) return [];
+          return [{ cursor, rect: element.getBoundingClientRect() }];
+        });
+        const containing = positioned
+          .filter(
+            ({ rect }) => rect.top <= readingLine && rect.bottom > readingLine,
+          )
+          .toSorted(
+            (left, right) =>
+              right.cursor.node.depth - left.cursor.node.depth ||
+              Math.abs(left.rect.top - readingLine) -
+                Math.abs(right.rect.top - readingLine),
+          );
+        const next =
+          containing[0] ??
+          positioned
+            .filter(({ rect }) => rect.top > readingLine)
+            .toSorted((left, right) => left.rect.top - right.rect.top)[0] ??
+          positioned
+            .filter(({ rect }) => rect.bottom <= readingLine)
+            .toSorted((left, right) => right.rect.bottom - left.rect.bottom)[0];
+        if (next) {
+          setCurrentNodeId((current) =>
+            current === next.cursor.node.id ? current : next.cursor.node.id,
+          );
+        }
+      });
+    }
+
+    const observer = new IntersectionObserver(updateCurrentCursor, {
+      rootMargin: '-1px 0px -40% 0px',
+      threshold: [0, 0.01, 0.5],
+    });
+    const toolbarObserver = new ResizeObserver(() => {
+      updateStickyRailOffset();
+      updateCurrentCursor();
+    });
+    if (toolbarRef.current) toolbarObserver.observe(toolbarRef.current);
+    reviewCursors.forEach(({ node }) => {
+      const element = document.getElementById(`question-${node.id}`);
+      if (element) observer.observe(element);
+    });
+    window.addEventListener('scroll', updateCurrentCursor, { passive: true });
+    window.addEventListener('resize', updateCurrentCursor);
+    updateStickyRailOffset();
+    updateCurrentCursor();
+    return () => {
+      if (frame !== undefined) cancelAnimationFrame(frame);
+      observer.disconnect();
+      toolbarObserver.disconnect();
+      document.documentElement.style.removeProperty('--review-toolbar-offset');
+      window.removeEventListener('scroll', updateCurrentCursor);
+      window.removeEventListener('resize', updateCurrentCursor);
+    };
+  }, [reviewCursors]);
+
   function replaceSearchParams(next: URLSearchParams) {
     const query = next.toString();
     window.history.replaceState(
@@ -1731,6 +1914,7 @@ export function ReviewSurface({
   }
 
   function navigateTo(id: string) {
+    setCurrentNodeId(id);
     const next = new URLSearchParams(searchParams.toString());
     next.set('question', id);
     replaceSearchParams(next);
@@ -1773,8 +1957,121 @@ export function ReviewSurface({
       });
   }
 
+  async function submitKeyboardOutcome(outcome: ReviewOutcome) {
+    if (
+      !keyboardOutcomeTarget ||
+      keyboardOutcomeDisabledReason ||
+      keyboardOutcomePending
+    ) {
+      if (keyboardOutcomeDisabledReason) {
+        setKeyboardStatus({
+          kind: 'error',
+          message: keyboardOutcomeDisabledReason,
+        });
+      }
+      return;
+    }
+    setKeyboardStatus({ kind: 'idle', message: '' });
+    try {
+      const message = await submitOutcome(keyboardOutcomeTarget, outcome);
+      setKeyboardStatus({ kind: 'success', message });
+    } catch (error) {
+      setKeyboardStatus({
+        kind: 'error',
+        message:
+          error instanceof Error ? error.message : 'Review request failed.',
+      });
+    }
+  }
+
+  function openKeyboardComment() {
+    if (!currentCursor) {
+      setKeyboardStatus({
+        kind: 'error',
+        message: 'There is no current question to comment on.',
+      });
+      return;
+    }
+    const target = reviewCommentTargetForNode(
+      currentCursor.node,
+      currentCursor.topLevelQuestion,
+      keyboardSide,
+      {
+        collectionId: paper.source.collection.id,
+        relativePath: paper.source.relativePath,
+      },
+    );
+    const unavailable = !target
+      ? 'The current node does not have a reviewable UUID and RAG state.'
+      : commentLoad.error;
+    if (!target || unavailable) {
+      setKeyboardStatus({
+        kind: 'error',
+        message: unavailable ?? 'Comments are unavailable.',
+      });
+      return;
+    }
+    keyboardCommentSubmissionId.current = undefined;
+    setCommentDraft('');
+    setKeyboardStatus({ kind: 'idle', message: '' });
+    setCommentDialog({
+      nodeLabel: currentCursor.node.label,
+      side: keyboardSide,
+      target,
+      topLevelLabel: currentCursor.topLevelQuestion.label,
+    });
+  }
+
+  function closeKeyboardComment() {
+    if (keyboardCommentPending) return;
+    keyboardCommentSubmissionId.current = undefined;
+    setCommentDialog(undefined);
+    setCommentDraft('');
+  }
+
+  async function submitKeyboardComment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!commentDialog || keyboardCommentPending) return;
+    const comment = commentDraft.trim();
+    if (!comment) {
+      setKeyboardStatus({
+        kind: 'error',
+        message: 'Enter a comment before adding it.',
+      });
+      return;
+    }
+    keyboardCommentSubmissionId.current ??= crypto.randomUUID();
+    setKeyboardStatus({ kind: 'idle', message: '' });
+    try {
+      await appendComment(
+        commentDialog.target,
+        comment,
+        keyboardCommentSubmissionId.current,
+      );
+      keyboardCommentSubmissionId.current = undefined;
+      setCommentDialog(undefined);
+      setCommentDraft('');
+      setKeyboardStatus({
+        kind: 'success',
+        message: `Comment added to ${commentDialog.nodeLabel}.`,
+      });
+    } catch (error) {
+      setKeyboardStatus({
+        kind: 'error',
+        message: error instanceof Error ? error.message : 'Comment failed.',
+      });
+    }
+  }
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (commentDialog) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeKeyboardComment();
+        }
+        return;
+      }
       const target = event.target as HTMLElement | null;
       if (
         target?.isContentEditable ||
@@ -1784,6 +2081,21 @@ export function ReviewSurface({
       }
 
       const key = event.key.toLowerCase();
+      if (
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        (key === 'g' || key === 'r' || key === 'c')
+      ) {
+        event.preventDefault();
+        if (key === 'c') {
+          openKeyboardComment();
+        } else {
+          void submitKeyboardOutcome(key === 'g' ? 'PRG' : 'PRCR');
+        }
+        return;
+      }
+
       if (
         !event.altKey &&
         !event.ctrlKey &&
@@ -1804,7 +2116,7 @@ export function ReviewSurface({
       if (!direction) return;
       const next = adjacentQuestionId(
         result.matchingQuestionTreeIds,
-        activeId,
+        navigationActiveId,
         direction,
       );
       if (next) {
@@ -1897,6 +2209,7 @@ export function ReviewSurface({
       <section
         className="review-toolbar"
         aria-label="Display and feedback preferences"
+        ref={toolbarRef}
       >
         <div className="review-toolbar-group review-toolbar-group--navigation">
           <button
@@ -2005,11 +2318,89 @@ export function ReviewSurface({
             </div>
           </>
         ) : null}
+        <div className="review-toolbar-group review-toolbar-group--quick-review">
+          <div className="keyboard-review-target" aria-live="polite">
+            <span className="toolbar-label">Current</span>
+            <strong>
+              {currentCursor?.node.label ?? 'No question'}
+              {` · ${keyboardSide === 'answer' ? 'Answer' : 'Question'}`}
+            </strong>
+            {currentCursor &&
+            currentCursor.node.id !== currentCursor.topLevelQuestion.id ? (
+              <small>
+                Outcome applies to {currentCursor.topLevelQuestion.label}
+              </small>
+            ) : null}
+          </div>
+          <div className="keyboard-target-control">
+            <span className="toolbar-label">Review target</span>
+            <div
+              aria-label="Keyboard review target"
+              className="keyboard-side-selector"
+              role="radiogroup"
+            >
+              {(['answer', 'question'] as const).map((side) => (
+                <label key={side}>
+                  <input
+                    checked={keyboardSide === side}
+                    name="keyboard-review-target"
+                    onChange={() => setKeyboardSide(side)}
+                    type="radio"
+                    value={side}
+                  />
+                  <span>{side === 'answer' ? 'Answer' : 'Question'}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div
+            aria-label="Quick review actions"
+            className="keyboard-review-actions"
+            role="group"
+          >
+            <button
+              disabled={
+                Boolean(keyboardOutcomeDisabledReason) || keyboardOutcomePending
+              }
+              onClick={() => void submitKeyboardOutcome('PRG')}
+              title={keyboardOutcomeDisabledReason ?? 'Looks good (g)'}
+              type="button"
+            >
+              Looks good <kbd>g</kbd>
+            </button>
+            <button
+              disabled={
+                Boolean(keyboardOutcomeDisabledReason) || keyboardOutcomePending
+              }
+              onClick={() => void submitKeyboardOutcome('PRCR')}
+              title={keyboardOutcomeDisabledReason ?? 'Make a change (r)'}
+              type="button"
+            >
+              Make a change <kbd>r</kbd>
+            </button>
+            <button
+              disabled={Boolean(commentLoad.error)}
+              onClick={openKeyboardComment}
+              title={commentLoad.error ?? 'Add comment (c)'}
+              type="button"
+            >
+              Comment <kbd>c</kbd>
+            </button>
+          </div>
+        </div>
         <span className="keyboard-note">j / k · next / previous</span>
+        {keyboardStatus.message ? (
+          <span
+            className={`keyboard-review-status keyboard-review-status--${keyboardStatus.kind}`}
+            role="status"
+          >
+            {keyboardStatus.message}
+          </span>
+        ) : null}
       </section>
 
       <QuestionNavigation
-        activeId={activeId}
+        activeId={navigationActiveId}
         label="Top question navigation"
         onNavigate={navigateTo}
         questionIds={result.matchingQuestionTreeIds}
@@ -2030,6 +2421,7 @@ export function ReviewSurface({
       ) : (
         <div className="paper-body">
           <PaperQuestionIndex
+            currentNodeId={currentCursor?.node.id}
             matchingNodeIds={matchingNodeIds}
             sections={result.matchingSections}
           />
@@ -2053,6 +2445,7 @@ export function ReviewSurface({
                       matchingNodeIds={matchingNodeIds}
                       node={displayQuestion}
                       preferences={preferences}
+                      reviewSide={keyboardSide}
                       reviewRuntime={reviewRuntime}
                       topLevelQuestion={displayQuestion}
                     />
@@ -2065,7 +2458,7 @@ export function ReviewSurface({
       )}
 
       <QuestionNavigation
-        activeId={activeId}
+        activeId={navigationActiveId}
         label="Bottom question navigation"
         onNavigate={navigateTo}
         questionIds={result.matchingQuestionTreeIds}
@@ -2074,6 +2467,100 @@ export function ReviewSurface({
         <a href="#paper-top">Back to top ↑</a>
         <span>TOML and canonical assets are never mutated by this app.</span>
       </footer>
+      {commentDialog ? (
+        <div
+          className="keyboard-comment-backdrop"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) closeKeyboardComment();
+          }}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="keyboard-comment-title"
+            aria-modal="true"
+            className="keyboard-comment-dialog"
+            role="dialog"
+          >
+            <header>
+              <div>
+                <span>State-specific feedback</span>
+                <h2 id="keyboard-comment-title">
+                  Comment on {commentDialog.nodeLabel}
+                </h2>
+              </div>
+              <button
+                aria-label="Close comment dialog"
+                disabled={keyboardCommentPending}
+                onClick={closeKeyboardComment}
+                type="button"
+              >
+                ×
+              </button>
+            </header>
+            <dl>
+              <div>
+                <dt>Target</dt>
+                <dd>
+                  {commentDialog.side === 'answer' ? 'Answer' : 'Question'} ·{' '}
+                  {reviewStateLabel(commentDialog.target.ragState)}
+                </dd>
+              </div>
+              {commentDialog.nodeLabel !== commentDialog.topLevelLabel ? (
+                <div>
+                  <dt>Question tree</dt>
+                  <dd>{commentDialog.topLevelLabel}</dd>
+                </div>
+              ) : null}
+            </dl>
+            <form onSubmit={(event) => void submitKeyboardComment(event)}>
+              <label htmlFor="keyboard-comment-draft">
+                Add feedback as {reviewer}
+              </label>
+              <textarea
+                autoFocus
+                id="keyboard-comment-draft"
+                maxLength={10_000}
+                onChange={(event) => setCommentDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeKeyboardComment();
+                  } else if (
+                    event.key === 'Enter' &&
+                    (event.ctrlKey || event.metaKey)
+                  ) {
+                    event.preventDefault();
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }}
+                placeholder="Append a comment to this UUID and current RAG state…"
+                rows={6}
+                value={commentDraft}
+              />
+              <div className="keyboard-comment-actions">
+                <span>
+                  <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> to add
+                </span>
+                <button
+                  disabled={keyboardCommentPending}
+                  onClick={closeKeyboardComment}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button disabled={keyboardCommentPending} type="submit">
+                  {keyboardCommentPending ? 'Adding…' : 'Add comment'}
+                </button>
+              </div>
+            </form>
+            {keyboardStatus.kind === 'error' && keyboardStatus.message ? (
+              <p className="review-action-status review-action-status--error">
+                {keyboardStatus.message}
+              </p>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }

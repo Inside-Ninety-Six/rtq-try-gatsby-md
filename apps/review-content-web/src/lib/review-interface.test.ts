@@ -90,6 +90,19 @@ test('top-level questions expose current outcomes and feedback as scan badges', 
   assert.match(component, /commentGroups\.current\.length/);
   assert.match(component, /runtime\.showPreviousFeedback/);
   assert.match(component, /function reviewStatusRails/);
+  assert.match(
+    component,
+    /reviewStatusRails\(node, reviewSide, reviewRuntime\)/,
+  );
+  assert.match(component, /reviewSide=\{keyboardSide\}/);
+  assert.match(
+    component,
+    /<span className="toolbar-label">Review target<\/span>/,
+  );
+  assert.doesNotMatch(
+    component,
+    /return visibleReviewSides\(preferences\)\.flatMap/,
+  );
   assert.match(component, /question-status-rail--\$\{tone\}/);
   assert.match(component, /side === 'answer' \? 'A' : 'Q'/);
   assert.match(
@@ -173,12 +186,19 @@ test('the filtered paper rail links every visible question hierarchy level', asy
   assert.match(component, /function QuestionIndexNode/);
   assert.match(component, /href=\{`#question-\$\{node\.id\}`\}/);
   assert.match(component, /node\.children\.map/);
+  assert.match(component, /aria-current=\{current \? 'true' : undefined\}/);
+  assert.match(component, /currentNodeId=\{currentCursor\?\.node\.id\}/);
+  assert.match(
+    component,
+    /querySelector<HTMLElement>\('\[aria-current="true"\]'\)/,
+  );
   assert.match(component, /sections=\{result\.matchingSections\}/);
   assert.match(component, /aria-label="Filtered question navigation"/);
   assert.match(
     css,
-    /\.question-index\s*{[^}]*position:\s*sticky;[^}]*top:\s*5rem/s,
+    /\.question-index\s*{[^}]*position:\s*sticky;[^}]*top:\s*var\(--review-toolbar-offset, 6rem\)/s,
   );
+  assert.match(css, /\.question-index-link--current\s*{/);
 });
 
 test('previous feedback is controlled globally without repeated hidden-history prompts', async () => {
@@ -218,6 +238,62 @@ test('question bodies do not navigate when clicked or focused', async () => {
 
   assert.doesNotMatch(component, /onFocusCapture=/);
   assert.doesNotMatch(component, /tabIndex=\{node\.depth === 0 \? 0 : -1\}/);
+});
+
+test('keyboard review follows the exact visible node while outcomes stay top-level', async () => {
+  const [component, css] = await Promise.all([
+    fs.readFile(componentUrl, 'utf8'),
+    fs.readFile(cssUrl, 'utf8'),
+  ]);
+
+  assert.match(component, /function flattenReviewCursors/);
+  assert.match(component, /new IntersectionObserver\(updateCurrentCursor/);
+  assert.match(component, /new ResizeObserver/);
+  assert.match(
+    component,
+    /Math\.min\(200, Math\.max\(140, window\.innerHeight \* 0\.2\)\)/,
+  );
+  assert.match(component, /window\.addEventListener\('scroll'/);
+  assert.match(
+    component,
+    /right\.cursor\.node\.depth - left\.cursor\.node\.depth/,
+  );
+  assert.match(
+    component,
+    /reviewTargetForNode\(currentCursor\.topLevelQuestion, keyboardSide/,
+  );
+  assert.match(
+    component,
+    /reviewCommentTargetForNode\(\s*currentCursor\.node,\s*currentCursor\.topLevelQuestion/s,
+  );
+  assert.match(
+    component,
+    /Outcome applies to \{currentCursor\.topLevelQuestion\.label\}/,
+  );
+  assert.match(component, /aria-label="Keyboard review target"/);
+  assert.match(component, /role="radiogroup"/);
+  assert.match(component, /name="keyboard-review-target"/);
+  assert.match(component, /type="radio"/);
+  assert.match(component, /useState<ReviewSide>\('answer'\)/);
+  assert.doesNotMatch(
+    component,
+    /enabledReviewSides\.includes\(preferredKeyboardSide\)/,
+  );
+  assert.doesNotMatch(
+    component,
+    /Enable question or answer review to use quick review/,
+  );
+  assert.match(component, /aria-label="Quick review actions"/);
+  assert.match(component, /key === 'g' \|\| key === 'r' \|\| key === 'c'/);
+  assert.match(
+    component,
+    /submitKeyboardOutcome\(key === 'g' \? 'PRG' : 'PRCR'\)/,
+  );
+  assert.match(component, /role="dialog"/);
+  assert.match(component, /aria-modal="true"/);
+  assert.match(component, /event\.currentTarget\.form\?\.requestSubmit\(\)/);
+  assert.match(css, /\.review-toolbar-group--quick-review\s*{/);
+  assert.match(css, /\.keyboard-comment-backdrop\s*{[^}]*position:\s*fixed/s);
 });
 
 test('review surfaces stay light and reviewer-facing rem sizes stay readable', async () => {

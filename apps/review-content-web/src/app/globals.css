@@ -1010,6 +1010,135 @@ a.paper-row:hover {
   margin-left: auto;
 }
 
+.review-toolbar-group--quick-review {
+  border-left: 1px solid var(--rule);
+  gap: 0.65rem;
+  padding-left: 1.25rem;
+}
+
+.keyboard-review-target {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 8rem;
+}
+
+.keyboard-review-target strong {
+  font-family: Charter, 'Iowan Old Style', Georgia, serif;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.keyboard-review-target small {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.keyboard-review-actions {
+  border: 1px solid var(--rule-strong);
+  display: flex;
+}
+
+.keyboard-review-actions button {
+  align-items: center;
+  background: var(--paper-bright);
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.875rem;
+  font-weight: 750;
+  gap: 0.4rem;
+  min-height: 2.6rem;
+  padding: 0.5rem 0.65rem;
+}
+
+.keyboard-review-actions button + button {
+  border-left: 1px solid var(--rule-strong);
+}
+
+.keyboard-target-control {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+}
+
+.keyboard-side-selector {
+  border: 1px solid var(--rule-strong);
+  display: flex;
+}
+
+.keyboard-side-selector label {
+  cursor: pointer;
+  display: block;
+  position: relative;
+}
+
+.keyboard-side-selector label + label {
+  border-left: 1px solid var(--rule-strong);
+}
+
+.keyboard-side-selector input {
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.keyboard-side-selector span {
+  align-items: center;
+  background: var(--paper-bright);
+  display: flex;
+  font-size: 0.875rem;
+  font-weight: 750;
+  min-height: 2.6rem;
+  padding: 0.5rem 0.65rem;
+}
+
+.keyboard-side-selector input:checked + span {
+  background: var(--ink);
+  color: var(--paper-bright);
+}
+
+.keyboard-side-selector input:focus-visible + span,
+.keyboard-side-selector label:hover span,
+.keyboard-review-actions button:hover:not(:disabled),
+.keyboard-review-actions button:focus-visible {
+  box-shadow: inset 0 -3px 0 var(--signal);
+}
+
+.keyboard-review-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.keyboard-review-actions kbd,
+.keyboard-comment-actions kbd {
+  border: 1px solid currentColor;
+  border-radius: 0.2rem;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1;
+  padding: 0.17rem 0.3rem;
+}
+
+.keyboard-review-status {
+  background: var(--paper-deep);
+  border-left: 3px solid var(--rule-strong);
+  font-size: 0.875rem;
+  font-weight: 750;
+  padding: 0.45rem 0.6rem;
+}
+
+.keyboard-review-status--success {
+  border-left-color: var(--ready);
+  color: var(--ready);
+}
+
+.keyboard-review-status--error {
+  border-left-color: var(--signal);
+  color: var(--signal-dark);
+}
+
 .toolbar-label {
   color: var(--signal);
   font-size: 0.875rem;
@@ -1131,12 +1260,12 @@ a.paper-row:hover {
 .question-index {
   display: grid;
   gap: 0.45rem;
-  max-height: calc(100vh - 6rem);
+  max-height: calc(100vh - var(--review-toolbar-offset, 6rem) - 1rem);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 0.55rem;
   position: sticky;
-  top: 5rem;
+  top: var(--review-toolbar-offset, 6rem);
 }
 
 .question-index > span {
@@ -1195,6 +1324,21 @@ a.paper-row:hover {
 .question-index-link--match {
   color: var(--ink) !important;
   font-weight: 750;
+}
+
+.question-index-link--current {
+  background: var(--ink);
+  box-shadow: inset 4px 0 var(--signal);
+  color: var(--paper-bright) !important;
+  font-weight: 800;
+  margin: 0.12rem 0;
+  padding-left: 0.65rem !important;
+  padding-right: 0.45rem !important;
+}
+
+.question-index-link--current small {
+  color: var(--paper-bright) !important;
+  opacity: 0.72;
 }
 
 .question-index a:hover,
@@ -2273,6 +2417,154 @@ a.paper-row:hover {
   padding: 0.75rem 0.9rem;
 }
 
+.keyboard-comment-backdrop {
+  align-items: center;
+  background: rgba(24, 29, 32, 0.72);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 80;
+}
+
+.keyboard-comment-dialog {
+  animation: keyboard-comment-enter 150ms ease-out;
+  background: var(--paper-bright);
+  border: 1px solid var(--ink);
+  box-shadow: 0.75rem 0.75rem 0 rgba(24, 29, 32, 0.28);
+  max-height: calc(100vh - 2rem);
+  max-width: 42rem;
+  overflow-y: auto;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  width: 100%;
+}
+
+.keyboard-comment-dialog > header {
+  align-items: start;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding-bottom: 0.85rem;
+}
+
+.keyboard-comment-dialog > header span,
+.keyboard-comment-dialog dt,
+.keyboard-comment-dialog form > label {
+  color: var(--muted);
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.keyboard-comment-dialog h2 {
+  font-family: Charter, 'Iowan Old Style', Georgia, serif;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  margin: 0.2rem 0 0;
+}
+
+.keyboard-comment-dialog > header button {
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  cursor: pointer;
+  font-size: 1.5rem;
+  height: 2.5rem;
+  line-height: 1;
+  width: 2.5rem;
+}
+
+.keyboard-comment-dialog dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  margin: 1rem 0;
+}
+
+.keyboard-comment-dialog dl > div {
+  border-left: 3px solid var(--signal);
+  padding-left: 0.65rem;
+}
+
+.keyboard-comment-dialog dd {
+  font-weight: 750;
+  margin: 0.2rem 0 0;
+}
+
+.keyboard-comment-dialog form {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.keyboard-comment-dialog textarea {
+  background: white;
+  border: 1px solid var(--rule-strong);
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.5;
+  min-height: 10rem;
+  padding: 0.8rem;
+  resize: vertical;
+}
+
+.keyboard-comment-dialog textarea:focus {
+  border-color: var(--signal);
+  box-shadow: 0 0 0 3px rgba(177, 63, 38, 0.15);
+  outline: 0;
+}
+
+.keyboard-comment-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
+.keyboard-comment-actions > span {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin-right: auto;
+}
+
+.keyboard-comment-actions button {
+  background: var(--paper-bright);
+  border: 1px solid var(--ink);
+  cursor: pointer;
+  font-weight: 750;
+  min-height: 2.6rem;
+  padding: 0.55rem 0.8rem;
+}
+
+.keyboard-comment-actions button[type='submit'] {
+  background: var(--ink);
+  color: white;
+}
+
+.keyboard-comment-actions button:disabled,
+.keyboard-comment-dialog > header button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+@keyframes keyboard-comment-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .keyboard-comment-dialog {
+    animation: none;
+  }
+}
+
 .nested-questions {
   border-left: 3px solid var(--paper-deep);
   margin-top: 2rem;
@@ -2715,6 +3007,11 @@ a.paper-row:hover {
 
   .review-toolbar-group--mode {
     margin-left: 0;
+    padding-left: 1rem;
+  }
+
+  .review-toolbar-group--quick-review {
+    flex: none;
     padding-left: 1rem;
   }
 
