@@ -919,6 +919,11 @@ a.paper-row:hover {
   gap: 0.75rem 1rem;
 }
 
+.review-toolbar-group--navigation {
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+
 .toolbar-filter-button {
   align-items: center;
   background: var(--ink);
@@ -942,6 +947,42 @@ a.paper-row:hover {
   min-height: 1.5rem;
   min-width: 1.5rem;
   place-items: center;
+}
+
+.toolbar-scroll-controls {
+  border: 1px solid var(--rule-strong);
+  display: flex;
+  min-height: 3rem;
+}
+
+.toolbar-scroll-controls button {
+  align-items: center;
+  background: var(--paper-bright);
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  font-weight: 700;
+  gap: 0.4rem;
+  padding: 0.6rem 0.7rem;
+}
+
+.toolbar-scroll-controls button + button {
+  border-left: 1px solid var(--rule-strong);
+}
+
+.toolbar-scroll-controls button:hover,
+.toolbar-scroll-controls button:focus-visible {
+  background: var(--paper-deep);
+}
+
+.toolbar-scroll-controls kbd {
+  border: 1px solid var(--rule-strong);
+  border-radius: 0.2rem;
+  color: var(--muted);
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1;
+  padding: 0.2rem 0.3rem;
 }
 
 .review-toolbar-group--mode,
@@ -1027,7 +1068,6 @@ a.paper-row:hover {
   color: var(--muted);
   font-family: 'SFMono-Regular', Consolas, monospace;
   font-size: 0.875rem;
-  text-transform: uppercase;
 }
 
 .question-navigation {

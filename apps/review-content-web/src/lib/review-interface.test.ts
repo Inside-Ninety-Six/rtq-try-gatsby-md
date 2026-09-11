@@ -106,6 +106,11 @@ test('the sticky toolbar keeps compact filter access with focus and return contr
 
   assert.match(component, /aria-controls="review-filters"/);
   assert.match(component, /selectedFilterCount/);
+  assert.match(component, /aria-label="Page navigation"/);
+  assert.match(component, /Scroll to top \(keyboard shortcut: t\)/);
+  assert.match(component, /Scroll to bottom \(keyboard shortcut: b\)/);
+  assert.match(component, /key === 't' \|\| key === 'b'/);
+  assert.match(component, /id="paper-bottom"/);
   assert.match(component, /id="review-filters"/);
   assert.match(component, /panel\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(component, /Back to \{returnQuestionLabel/);
@@ -132,6 +137,13 @@ test('reports the active outcome destination once in the page header', async () 
   assert.doesNotMatch(component, /Outcomes → Sheets/);
   assert.match(siteHeader, /Outcomes & comments → local SQLite/);
   assert.match(siteHeader, /Outcomes → Sheets · comments → local SQLite/);
+});
+
+test('paper header omits source-paper filename badges', async () => {
+  const component = await fs.readFile(componentUrl, 'utf8');
+
+  assert.doesNotMatch(component, /sourcePaperStems\.map/);
+  assert.doesNotMatch(component, /<code key=\{stem\}>Source \{stem\}<\/code>/);
 });
 
 test('the filtered paper rail links every visible question hierarchy level', async () => {
@@ -183,12 +195,11 @@ test('feedback follows the stable composer in a full-width review flow', async (
   );
 });
 
-test('focusing an interactive review control does not navigate its question', async () => {
+test('question bodies do not navigate when clicked or focused', async () => {
   const component = await fs.readFile(componentUrl, 'utf8');
 
-  assert.match(component, /onFocusCapture=\{\(event\) =>/);
-  assert.match(component, /event\.target === event\.currentTarget/);
-  assert.doesNotMatch(component, /onFocusCapture=\{onActivate\}/);
+  assert.doesNotMatch(component, /onFocusCapture=/);
+  assert.doesNotMatch(component, /tabIndex=\{node\.depth === 0 \? 0 : -1\}/);
 });
 
 test('review surfaces stay light and reviewer-facing rem sizes stay readable', async () => {

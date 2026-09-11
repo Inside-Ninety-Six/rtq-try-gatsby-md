@@ -804,7 +804,6 @@ function QuestionNode({
   active,
   matchingNodeIds,
   node,
-  onActivate,
   preferences,
   reviewRuntime,
   topLevelQuestion,
@@ -812,7 +811,6 @@ function QuestionNode({
   active: boolean;
   matchingNodeIds: ReadonlySet<string>;
   node: DisplayPaperNode;
-  onActivate: () => void;
   preferences: ReviewPreferences;
   reviewRuntime: ReviewRuntimeState;
   topLevelQuestion: DisplayPaperNode;
@@ -824,10 +822,6 @@ function QuestionNode({
         active && node.depth === 0 ? ' question-node--active' : ''
       }${exactMatch ? '' : ' question-node--context'}`}
       id={`question-${node.id}`}
-      onFocusCapture={(event) => {
-        if (event.target === event.currentTarget) onActivate();
-      }}
-      tabIndex={node.depth === 0 ? 0 : -1}
     >
       <header className="question-heading">
         <div className="question-heading-main">
@@ -873,7 +867,6 @@ function QuestionNode({
               key={child.id}
               matchingNodeIds={matchingNodeIds}
               node={child}
-              onActivate={onActivate}
               preferences={preferences}
               reviewRuntime={reviewRuntime}
               topLevelQuestion={topLevelQuestion}
@@ -1706,6 +1699,15 @@ export function ReviewSurface({
     startRefresh(() => router.refresh());
   }
 
+  function scrollToPageBoundary(boundary: 'top' | 'bottom') {
+    document
+      .getElementById(boundary === 'top' ? 'paper-top' : 'paper-bottom')
+      ?.scrollIntoView({
+        behavior: 'smooth',
+        block: boundary === 'top' ? 'start' : 'end',
+      });
+  }
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
@@ -1715,12 +1717,23 @@ export function ReviewSurface({
       ) {
         return;
       }
+
+      const key = event.key.toLowerCase();
+      if (
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        (key === 't' || key === 'b')
+      ) {
+        event.preventDefault();
+        scrollToPageBoundary(key === 't' ? 'top' : 'bottom');
+        return;
+      }
+
       const direction =
-        event.key.toLowerCase() === 'j' ||
-        (event.altKey && event.key === 'ArrowDown')
+        key === 'j' || (event.altKey && event.key === 'ArrowDown')
           ? 1
-          : event.key.toLowerCase() === 'k' ||
-              (event.altKey && event.key === 'ArrowUp')
+          : key === 'k' || (event.altKey && event.key === 'ArrowUp')
             ? -1
             : undefined;
       if (!direction) return;
@@ -1779,9 +1792,6 @@ export function ReviewSurface({
           {paper.metadata.schoolIds.map((school) => (
             <code key={school}>School {school}</code>
           ))}
-          {paper.source.provenance.sourcePaperStems.map((stem) => (
-            <code key={stem}>Source {stem}</code>
-          ))}
         </div>
       </header>
 
@@ -1816,17 +1826,45 @@ export function ReviewSurface({
         className="review-toolbar"
         aria-label="Display and feedback preferences"
       >
-        <button
-          aria-controls="review-filters"
-          className="toolbar-filter-button"
-          onClick={showFilters}
-          type="button"
-        >
-          Filters
-          <strong aria-label={`${selectedFilterCount} active filters`}>
-            {selectedFilterCount}
-          </strong>
-        </button>
+        <div className="review-toolbar-group review-toolbar-group--navigation">
+          <button
+            aria-controls="review-filters"
+            className="toolbar-filter-button"
+            onClick={showFilters}
+            type="button"
+          >
+            Filters
+            <strong aria-label={`${selectedFilterCount} active filters`}>
+              {selectedFilterCount}
+            </strong>
+          </button>
+          <div
+            aria-label="Page navigation"
+            className="toolbar-scroll-controls"
+            role="group"
+          >
+            <button
+              aria-label="Scroll to top (keyboard shortcut: t)"
+              onClick={() => scrollToPageBoundary('top')}
+              title="Scroll to top (t)"
+              type="button"
+            >
+              <span aria-hidden="true">↑</span>
+              <span>Top</span>
+              <kbd>t</kbd>
+            </button>
+            <button
+              aria-label="Scroll to bottom (keyboard shortcut: b)"
+              onClick={() => scrollToPageBoundary('bottom')}
+              title="Scroll to bottom (b)"
+              type="button"
+            >
+              <span aria-hidden="true">↓</span>
+              <span>Bottom</span>
+              <kbd>b</kbd>
+            </button>
+          </div>
+        </div>
         <div className="review-toolbar-group">
           <span className="toolbar-label">Display</span>
           <PreferenceToggle
@@ -1888,7 +1926,7 @@ export function ReviewSurface({
             </div>
           </>
         ) : null}
-        <span className="keyboard-note">J / K · next / previous</span>
+        <span className="keyboard-note">j / k · next / previous</span>
       </section>
 
       <QuestionNavigation
@@ -1936,7 +1974,6 @@ export function ReviewSurface({
                       key={displayQuestion.id}
                       matchingNodeIds={matchingNodeIds}
                       node={displayQuestion}
-                      onActivate={() => navigateTo(displayQuestion.id)}
                       preferences={preferences}
                       reviewRuntime={reviewRuntime}
                       topLevelQuestion={displayQuestion}
@@ -1955,7 +1992,7 @@ export function ReviewSurface({
         onNavigate={navigateTo}
         questionIds={result.matchingQuestionTreeIds}
       />
-      <footer className="paper-footer">
+      <footer className="paper-footer" id="paper-bottom">
         <a href="#paper-top">Back to top ↑</a>
         <span>TOML and canonical assets are never mutated by this app.</span>
       </footer>

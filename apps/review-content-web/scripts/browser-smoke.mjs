@@ -42,7 +42,7 @@ for (const expected of [
   'Reset',
   'S1 Q1',
   'S1 Q5a',
-  'J / K',
+  'j / k',
 ]) {
   assert.match(paper.text, new RegExp(expected));
 }
