@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
-import { paperRoute } from '@/lib/review-view-model';
+import { collectionRoute, paperRoute } from '@/lib/review-view-model';
 
 export type BrowserCollection = Readonly<{
   count: number;
@@ -27,22 +27,23 @@ export type BrowserPaper = Readonly<{
 const PAGE_SIZE = 80;
 
 export function FileBrowser({
+  activeCollectionId,
   collections,
+  initialQuery = '',
   papers,
 }: {
+  activeCollectionId: string;
   collections: readonly BrowserCollection[];
+  initialQuery?: string;
   papers: readonly BrowserPaper[];
 }) {
-  const [activeCollection, setActiveCollection] = useState(
-    collections[0]?.id ?? '',
-  );
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const matches = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase();
     return papers.filter(
       (paper) =>
-        paper.collectionId === activeCollection &&
+        paper.collectionId === activeCollectionId &&
         (!needle ||
           [
             paper.title,
@@ -51,14 +52,26 @@ export function FileBrowser({
             ...paper.focusGroups,
           ].some((value) => value.toLocaleLowerCase().includes(needle))),
     );
-  }, [activeCollection, papers, query]);
+  }, [activeCollectionId, papers, query]);
   const active = collections.find(
-    (collection) => collection.id === activeCollection,
+    (collection) => collection.id === activeCollectionId,
   );
 
-  function chooseCollection(id: string) {
-    setActiveCollection(id);
+  function updateQuery(value: string) {
+    setQuery(value);
     setVisibleCount(PAGE_SIZE);
+    const parameters = new URLSearchParams(window.location.search);
+    const normalized = value.trim();
+    if (normalized) parameters.set('q', normalized);
+    else parameters.delete('q');
+    const serialized = parameters.toString();
+    window.history.replaceState(
+      null,
+      '',
+      serialized
+        ? `${window.location.pathname}?${serialized}`
+        : window.location.pathname,
+    );
   }
 
   return (
@@ -70,16 +83,17 @@ export function FileBrowser({
         </div>
         <div className="collection-list">
           {collections.map((collection) => (
-            <button
-              aria-pressed={collection.id === activeCollection}
+            <Link
+              aria-current={
+                collection.id === activeCollectionId ? 'page' : undefined
+              }
               className="collection-button"
+              href={collectionRoute(collection.id)}
               key={collection.id}
-              onClick={() => chooseCollection(collection.id)}
-              type="button"
             >
               <span>{collection.label}</span>
               <strong>{collection.count}</strong>
-            </button>
+            </Link>
           ))}
         </div>
         <nav className="reference-list" aria-label="Reference content">
@@ -102,8 +116,7 @@ export function FileBrowser({
             <span>Find within collection</span>
             <input
               onChange={(event) => {
-                setQuery(event.target.value);
-                setVisibleCount(PAGE_SIZE);
+                updateQuery(event.target.value);
               }}
               placeholder="Title, filename, focus group…"
               type="search"
@@ -129,7 +142,11 @@ export function FileBrowser({
                 {paper.state === 'ready' ? (
                   <Link
                     className="paper-row"
-                    href={paperRoute(paper.collectionId, paper.relativePath)}
+                    href={paperRoute(
+                      paper.collectionId,
+                      paper.relativePath,
+                      query,
+                    )}
                   >
                     <span className="paper-number">
                       {String(index + 1).padStart(3, '0')}

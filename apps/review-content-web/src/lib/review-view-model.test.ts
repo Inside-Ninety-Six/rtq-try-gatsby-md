@@ -7,6 +7,7 @@ import {
   LEGACY_REVIEW_PREFERENCES_KEY,
   REVIEW_PREFERENCES_KEY,
   adjacentQuestionId,
+  collectionRoute,
   paperRoute,
   parseReviewPreferences,
   reviewStateLabel,
@@ -119,6 +120,19 @@ test('paper routes encode collection and every source-relative segment', () => {
   assert.equal(
     paperRoute('topicToml', 'nested/a paper.toml'),
     '/papers/topicToml/nested/a%20paper.toml',
+  );
+  assert.equal(
+    paperRoute('topicToml', 'nested/a paper.toml', 'subtraction facts'),
+    '/papers/topicToml/nested/a%20paper.toml?q=subtraction%20facts',
+  );
+});
+
+test('collection routes encode the collection identifier', () => {
+  assert.equal(collectionRoute('focusToml'), '/papers/focusToml');
+  assert.equal(collectionRoute('focus papers'), '/papers/focus%20papers');
+  assert.equal(
+    collectionRoute('topicToml', 'subtraction facts'),
+    '/papers/topicToml?q=subtraction%20facts',
   );
 });
 

@@ -35,6 +35,7 @@ import {
   LEGACY_REVIEW_PREFERENCES_KEY,
   REVIEW_PREFERENCES_KEY,
   adjacentQuestionId,
+  collectionRoute,
   parseReviewPreferences,
   reviewStateLabel,
   visibleReviewSides,
@@ -1758,7 +1759,14 @@ export function ReviewSurface({
         <div className="paper-breadcrumb">
           <Link href="/">Paper index</Link>
           <span>/</span>
-          <span>{paper.source.collection.label}</span>
+          <Link
+            href={collectionRoute(
+              paper.source.collection.id,
+              searchParams.get('q') ?? undefined,
+            )}
+          >
+            {paper.source.collection.label}
+          </Link>
         </div>
         <div className="paper-title-row">
           <div>

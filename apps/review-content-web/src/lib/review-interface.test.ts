@@ -9,6 +9,7 @@ const componentUrl = new URL(
 const siteHeaderUrl = new URL('../components/site-header.tsx', import.meta.url);
 const cssUrl = new URL('../app/globals.css', import.meta.url);
 const homeUrl = new URL('../app/page.tsx', import.meta.url);
+const paperIndexUrl = new URL('../components/paper-index.tsx', import.meta.url);
 const browserUrl = new URL('../components/file-browser.tsx', import.meta.url);
 const macrosPageUrl = new URL('../app/macros/page.tsx', import.meta.url);
 const macrosListUrl = new URL(
@@ -251,13 +252,26 @@ test('review Markdown uses the shared PaperList contract and semantic defaults',
 });
 
 test('the landing page uses a compact paper-first introduction', async () => {
-  const [home, css] = await Promise.all([
+  const [home, paperIndex, browser, component, css] = await Promise.all([
     fs.readFile(homeUrl, 'utf8'),
+    fs.readFile(paperIndexUrl, 'utf8'),
+    fs.readFile(browserUrl, 'utf8'),
+    fs.readFile(componentUrl, 'utf8'),
     fs.readFile(cssUrl, 'utf8'),
   ]);
 
-  assert.match(home, /<h1>Choose a paper<\/h1>/);
-  assert.doesNotMatch(home, /Change the lens/);
+  assert.match(home, /<PaperIndex initialQuery=/);
+  assert.match(paperIndex, /<h1>Choose a paper<\/h1>/);
+  assert.doesNotMatch(paperIndex, /Change the lens/);
+  assert.match(browser, /href=\{collectionRoute\(collection\.id\)\}/);
+  assert.match(browser, /aria-current=/);
+  assert.match(browser, /window\.history\.replaceState/);
+  assert.match(browser, /parameters\.set\('q', normalized\)/);
+  assert.match(browser, /paper\.relativePath,\s*query,/);
+  assert.match(
+    component,
+    /collectionRoute\(\s*paper\.source\.collection\.id,\s*searchParams\.get\('q'\)/,
+  );
   assert.match(css, /\.index-intro\s*{[^}]*padding:\s*1\.5rem 0/s);
   assert.match(
     css,

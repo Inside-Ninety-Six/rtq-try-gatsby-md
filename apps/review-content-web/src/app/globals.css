@@ -274,12 +274,12 @@ p {
 }
 
 .collection-button:hover,
-.collection-button[aria-pressed='true'] {
+.collection-button[aria-current='page'] {
   background: #dce1e5;
   color: var(--ink);
 }
 
-.collection-button[aria-pressed='true'] {
+.collection-button[aria-current='page'] {
   box-shadow: inset 3px 0 var(--signal);
 }
 
@@ -2466,7 +2466,7 @@ a.paper-row:hover {
     border-right: 1px solid var(--rule);
   }
 
-  .collection-button[aria-pressed='true'] {
+  .collection-button[aria-current='page'] {
     box-shadow: inset 0 -3px var(--signal);
   }
 

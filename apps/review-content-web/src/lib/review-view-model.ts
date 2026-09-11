@@ -122,12 +122,34 @@ export function adjacentQuestionId(
   return questionIds[nextIndex];
 }
 
-export function paperRoute(collectionId: string, relativePath: string): string {
+function withIndexQuery(route: string, indexQuery?: string): string {
+  const query = indexQuery?.trim();
+  return query ? `${route}?q=${encodeURIComponent(query)}` : route;
+}
+
+export function paperRoute(
+  collectionId: string,
+  relativePath: string,
+  indexQuery?: string,
+): string {
   const slug = relativePath
     .split('/')
     .map((segment) => encodeURIComponent(segment))
     .join('/');
-  return `/papers/${encodeURIComponent(collectionId)}/${slug}`;
+  return withIndexQuery(
+    `/papers/${encodeURIComponent(collectionId)}/${slug}`,
+    indexQuery,
+  );
+}
+
+export function collectionRoute(
+  collectionId: string,
+  indexQuery?: string,
+): string {
+  return withIndexQuery(
+    `/papers/${encodeURIComponent(collectionId)}`,
+    indexQuery,
+  );
 }
 
 export function reviewStateLabel(value: string): string {
