@@ -10,10 +10,11 @@
   "scripts": {
     "format:check": "prettier --check .",
     "format:fix": "prettier --write .",
-    "test": "node --no-warnings --test --experimental-strip-types src/index.test.ts",
+    "test": "node --no-warnings --test --experimental-strip-types src/*.test.ts",
     "types": "tsc --noEmit"
   },
   "dependencies": {
+    "remark-gfm": "^4.0.1",
     "remark-mdx": "^3.1.1",
     "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",

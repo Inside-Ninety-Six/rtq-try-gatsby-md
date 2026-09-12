@@ -19,6 +19,12 @@ formula, and tip Markdown. The optional `listStyleType` uses the shared review
 contract and browser-native CSS markers; raw source retains the authored
 wrapper. Unwrapped ordered and unordered lists default to `decimal` and `disc`.
 
+Authored `PaperTable` wrappers use the same strict property vocabulary,
+defaults, semantic header transformations, and presentation layouts as RTQ web.
+Invalid attributes or table structures surface as preparation notes, while the
+raw source retains the authored wrapper. Raw GFM tables use the same visual
+defaults without claiming explicitly authored configuration.
+
 The paper index also links to a dedicated read-only view of the canonical
 `packages/papers/scripts/papers/lib/model/macros.toml`. That page treats the
 file as one review document and shows every macro's source and rendered

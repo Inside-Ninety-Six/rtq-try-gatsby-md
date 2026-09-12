@@ -17,7 +17,7 @@ import type {
   DisplayWorkingSegment,
 } from './display-model';
 import { preparePaperListMarkdown } from './paper-list-markdown';
-import { normalizePaperTableMarkdown } from './paper-table-markdown';
+import { preparePaperTableMarkdown } from './paper-table-markdown';
 import {
   parseWorkingSections,
   type WorkingSectionParseResult,
@@ -230,10 +230,10 @@ function prepareField(
   try {
     let imageIndex = 0;
     let divisionIndex = 0;
-    const tables = normalizePaperTableMarkdown(
+    const tables = preparePaperTableMarkdown(
       field.expanded.replace(MDX_COMMENT, ''),
     );
-    const paperLists = preparePaperListMarkdown(tables);
+    const paperLists = preparePaperListMarkdown(tables.markdown);
     const images = paperLists.markdown.replace(IMAGE, (component) =>
       paperImageMarkdown(component, field.context, imageIndex++),
     );
@@ -257,9 +257,9 @@ function prepareField(
     );
     return {
       ...field,
-      ...(paperLists.issue || parsed.issue
+      ...(tables.issue || paperLists.issue || parsed.issue
         ? {
-            preparationIssue: [paperLists.issue, parsed.issue]
+            preparationIssue: [tables.issue, paperLists.issue, parsed.issue]
               .filter(Boolean)
               .join(' '),
           }

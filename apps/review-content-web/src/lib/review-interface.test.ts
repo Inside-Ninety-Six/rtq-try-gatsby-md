@@ -314,7 +314,7 @@ test('review surfaces stay light and reviewer-facing rem sizes stay readable', a
   );
 });
 
-test('review Markdown uses the shared PaperList contract and semantic defaults', async () => {
+test('review Markdown uses the shared PaperList and PaperTable contracts', async () => {
   const [markdown, preparation, css] = await Promise.all([
     fs.readFile(markdownUrl, 'utf8'),
     fs.readFile(preparePaperUrl, 'utf8'),
@@ -324,9 +324,12 @@ test('review Markdown uses the shared PaperList contract and semantic defaults',
   assert.match(markdown, /@rtq\/review-paper-markdown/);
   assert.match(markdown, /remarkPaperListMdx/);
   assert.match(markdown, /remarkPaperList/);
+  assert.match(markdown, /remarkPaperTable/);
+  assert.match(markdown, /rehypePaperTable/);
+  assert.match(preparation, /preparePaperTableMarkdown/);
   assert.match(
     preparation,
-    /const paperLists = preparePaperListMarkdown\(tables\)/,
+    /const paperLists = preparePaperListMarkdown\(tables\.markdown\)/,
   );
   assert.match(preparation, /rendered: normalizeWorkingSections\(prepared/);
   assert.match(preparation, /children: node\.children\.map\(prepareNode\)/);

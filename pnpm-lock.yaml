@@ -490,6 +490,9 @@ importers:
 
   packages/review-paper-markdown:
     dependencies:
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
       remark-math:
         specifier: ^6.0.0
         version: 6.0.0

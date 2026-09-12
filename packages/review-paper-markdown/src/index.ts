@@ -222,3 +222,5 @@ export const remarkPaperList: Plugin<[], Root> = () => (tree) => {
 };
 
 export { remarkMdx as remarkPaperListMdx };
+
+export * from "./paper-table.ts";

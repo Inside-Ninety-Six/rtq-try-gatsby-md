@@ -1,8 +1,10 @@
 'use client';
 
 import {
+  rehypePaperTable,
   remarkPaperList,
   remarkPaperListMdx,
+  remarkPaperTable,
 } from '@rtq/review-paper-markdown';
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
@@ -29,11 +31,12 @@ export function RtqMarkdown({ markdown }: { markdown: string }) {
             <img alt={alt ?? ''} src={src} title={title} />
           ),
         }}
-        rehypePlugins={[[rehypeKatex, rtqKatexOptions]]}
+        rehypePlugins={[rehypePaperTable, [rehypeKatex, rtqKatexOptions]]}
         remarkPlugins={[
           remarkGfm,
           remarkMath,
           remarkPaperListMdx,
+          remarkPaperTable,
           remarkPaperList,
         ]}
       >

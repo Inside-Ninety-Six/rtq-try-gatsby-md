@@ -1639,7 +1639,10 @@ a.paper-row:hover {
   font-family: Charter, 'Iowan Old Style', Georgia, serif;
   font-size: clamp(1rem, 1.45vw, 1.22rem);
   line-height: 1.65;
+  max-width: 100%;
   min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .rtq-markdown > :first-child {
@@ -1667,25 +1670,179 @@ a.paper-row:hover {
   object-fit: contain;
 }
 
-.rtq-markdown table {
-  border-collapse: collapse;
-  display: block;
-  font-family: 'Avenir Next', Avenir, sans-serif;
-  font-size: 0.9rem;
+.rtq-paper-table {
+  --rtq-paper-table-rule-anchor: var(--rule-strong);
+  --rtq-paper-table-rule-header: var(--rule-strong);
+  --rtq-paper-table-rule-row: var(--rule);
+  --rtq-paper-table-rule-column: var(--rule);
+
   max-width: 100%;
-  overflow-x: auto;
-  width: max-content;
+  width: 100%;
 }
 
-.rtq-markdown th,
-.rtq-markdown td {
-  border: 1px solid var(--rule-strong);
-  min-width: 4rem;
-  padding: 0.55rem 0.7rem;
+.rtq-paper-table table {
+  border-collapse: collapse;
+  color: inherit;
+  font-family: 'Avenir Next', Avenir, sans-serif;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3125rem;
+  table-layout: auto;
 }
 
-.rtq-markdown th {
-  background: var(--paper-deep);
+.rtq-paper-table[data-width='fit'] table {
+  width: auto;
+}
+
+.rtq-paper-table[data-width='full'] table {
+  width: 100%;
+}
+
+.rtq-paper-table[data-align='start'] table {
+  margin-inline: 0 auto;
+}
+
+.rtq-paper-table[data-align='center'] table {
+  margin-inline: auto;
+}
+
+.rtq-paper-table[data-align='end'] table {
+  margin-inline: auto 0;
+}
+
+.rtq-paper-table :where(th, td) {
+  padding-block: 0.5rem;
+  padding-inline: 1rem;
+  text-align: center;
+}
+
+.rtq-paper-table thead th {
+  font-weight: 650;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.rtq-paper-table tbody :where(th, td) {
+  vertical-align: top;
+}
+
+.rtq-paper-table tbody th[scope='row'] {
+  font-weight: 650;
+  text-align: start;
+}
+
+.rtq-paper-table[data-cell-align-authored][data-cell-align='center']
+  :where(th, td) {
+  text-align: center;
+}
+
+.rtq-paper-table[data-cell-align-authored][data-cell-align='left']
+  :where(th, td) {
+  text-align: left;
+}
+
+.rtq-paper-table[data-cell-align-authored][data-cell-align='right']
+  :where(th, td) {
+  text-align: right;
+}
+
+.rtq-paper-table[data-density='compact'] table {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.rtq-paper-table[data-density='compact'] :where(th, td) {
+  padding-block: 0.25rem;
+  padding-inline: 0.75rem;
+}
+
+.rtq-paper-table[data-density='roomy'] table {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.rtq-paper-table[data-density='roomy'] :where(th, td) {
+  padding-block: 0.75rem;
+  padding-inline: 1.25rem;
+}
+
+.rtq-paper-table[data-first-column-start-padding='none']
+  tr
+  > :where(th, td):first-child {
+  padding-inline-start: 0;
+}
+
+.rtq-paper-table:is(
+    [data-grid='rows'],
+    [data-grid='horizontal'],
+    [data-grid='interior'],
+    [data-grid='framed']
+  )
+  thead
+  > tr
+  > th {
+  border-block-end: 1px solid var(--rtq-paper-table-rule-header);
+}
+
+.rtq-paper-table:is(
+    [data-grid='rows'],
+    [data-grid='horizontal'],
+    [data-grid='interior'],
+    [data-grid='framed']
+  )
+  tbody
+  > tr:not(:last-child)
+  > :where(th, td) {
+  border-block-end: 1px solid var(--rtq-paper-table-rule-row);
+}
+
+.rtq-paper-table:is(
+    [data-grid='horizontal'],
+    [data-grid='interior'],
+    [data-grid='framed']
+  )
+  table {
+  border-block: 1.5px solid var(--rtq-paper-table-rule-anchor);
+}
+
+.rtq-paper-table:is(
+    [data-grid='vertical'],
+    [data-grid='interior'],
+    [data-grid='framed']
+  )
+  tr
+  > :where(th, td):not(:last-child) {
+  border-inline-end: 1px solid var(--rtq-paper-table-rule-column);
+}
+
+.rtq-paper-table[data-grid='framed'] table {
+  border-inline: 1px solid var(--rtq-paper-table-rule-anchor);
+}
+
+.rtq-paper-table[data-blank-corner='open']
+  thead
+  > tr:first-child
+  > th:first-child {
+  border-block-end: 0;
+  border-inline-end: 0;
+}
+
+.rtq-paper-table[data-indent='sm'] {
+  padding-inline-start: 0.75rem;
+}
+
+.rtq-paper-table[data-indent='md'] {
+  padding-inline-start: 1rem;
+}
+
+@media (min-width: 40rem) {
+  .rtq-paper-table[data-indent='sm'] {
+    padding-inline-start: 1rem;
+  }
+
+  .rtq-paper-table[data-indent='md'] {
+    padding-inline-start: 2rem;
+  }
 }
 
 .rtq-markdown blockquote {
