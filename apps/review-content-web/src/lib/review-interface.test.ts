@@ -18,6 +18,10 @@ const macrosListUrl = new URL(
 );
 const markdownUrl = new URL('../components/rtq-markdown.tsx', import.meta.url);
 const preparePaperUrl = new URL('../lib/prepare-paper.ts', import.meta.url);
+const findingsRouteUrl = new URL(
+  '../app/api/review/findings/route.ts',
+  import.meta.url,
+);
 
 test('display preferences use accessible switches and independent review sides', async () => {
   const component = await fs.readFile(componentUrl, 'utf8');
@@ -294,6 +298,24 @@ test('keyboard review follows the exact visible node while outcomes stay top-lev
   assert.match(component, /event\.currentTarget\.form\?\.requestSubmit\(\)/);
   assert.match(css, /\.review-toolbar-group--quick-review\s*{/);
   assert.match(css, /\.keyboard-comment-backdrop\s*{[^}]*position:\s*fixed/s);
+});
+
+test('global findings use one product-wide composer and stay out of paper state', async () => {
+  const [component, route] = await Promise.all([
+    fs.readFile(componentUrl, 'utf8'),
+    fs.readFile(findingsRouteUrl, 'utf8'),
+  ]);
+
+  assert.match(component, />\s*Global finding\s*<\/button>/);
+  assert.match(component, /All review content \/ product/);
+  assert.match(component, /fetch\('\/api\/review\/findings'/);
+  assert.match(component, /sourceVersion: paper\.source\.version/);
+  assert.match(component, /message: 'Global finding submitted\.'/);
+  assert.doesNotMatch(component, /setGlobalFindings|globalFindingCount/);
+  assert.match(route, /export function GET\(\)/);
+  assert.match(route, /listTodoGlobalReviewFindings\(\)/);
+  assert.match(route, /export async function PATCH/);
+  assert.match(route, /processGlobalReviewFinding\(input\)/);
 });
 
 test('review surfaces stay light and reviewer-facing rem sizes stay readable', async () => {

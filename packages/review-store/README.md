@@ -1,7 +1,8 @@
 # `@rtq/review-store`
 
-Server-only persistence for review comments and review outcomes. Runtime code
-must use the high-level `comments` and `outcomes` repositories exported from
+Server-only persistence for review comments, review outcomes, and product-wide
+review findings. Runtime code must use the high-level `comments`, `outcomes`,
+and `findings` repositories exported from
 `@rtq/review-store/server`; schema, SQLite, migration, and database-path modules
 are package internals. The package deliberately has no default export path, so
 runtime consumers must opt into the explicit server entry point.
@@ -17,6 +18,12 @@ Run migrations and tracking checks from the workspace root:
 pnpm database:migrate
 pnpm database:tracking:check
 ```
+
+The `findings` repository keeps cross-cutting observations separate from paper
+comments. `append` creates an idempotent `todo` row with canonical source
+provenance, `listTodo` returns only the active inbox in chronological order,
+and `markProcessed` atomically records `processedAt` and `processedBy`. There is
+no Jira URL field; external consumers own any onward Jira mapping.
 
 ## Resolve current-state outcomes
 

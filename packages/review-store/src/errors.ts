@@ -12,6 +12,13 @@ export class ReviewCommentConflictError extends Error {
   }
 }
 
+export class ReviewFindingConflictError extends Error {
+  constructor() {
+    super("That submission ID is already associated with another finding.");
+    this.name = "ReviewFindingConflictError";
+  }
+}
+
 export class ReviewStoreValidationError extends Error {
   constructor(field: string, message?: string) {
     super(message ?? `Review store field "${field}" must not be empty.`);

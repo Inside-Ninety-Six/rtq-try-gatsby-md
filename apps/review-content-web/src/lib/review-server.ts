@@ -12,6 +12,7 @@ import {
   normalizeSourceRag,
   reviewCommentTargetForNode,
   reviewTargetForNode,
+  type GlobalReviewFindingSourceDescriptor,
   type ReviewCommentTargetDescriptor,
   type ReviewOutcomeSelection,
   type ReviewTargetDescriptor,
@@ -40,6 +41,18 @@ export type ReviewCommentRequest = Readonly<{
   reviewer: string;
   submissionId: string;
   target: ReviewCommentTargetDescriptor;
+}>;
+
+export type GlobalReviewFindingRequest = Readonly<{
+  finding: string;
+  reviewer: string;
+  source: GlobalReviewFindingSourceDescriptor;
+  submissionId: string;
+}>;
+
+export type ProcessGlobalReviewFindingRequest = Readonly<{
+  id: string;
+  processedBy: string;
 }>;
 
 function record(value: unknown): Record<string, unknown> {
@@ -148,14 +161,10 @@ export function parseReviewCommentRequest(
     target: { ...targetBody, sheet: null },
   });
   const comment = requiredString(body.comment, 'Comment', 10_000);
-  const submissionId = requiredString(body.submissionId, 'Submission ID', 128);
-  if (!/^[A-Za-z0-9_-]+$/.test(submissionId)) {
-    throw new ReviewRequestError('Submission ID has an invalid format.');
-  }
   return {
     comment,
     reviewer: mutation.reviewer,
-    submissionId,
+    submissionId: submissionId(body.submissionId),
     target: {
       collectionId: mutation.target.collectionId,
       nodeId: mutation.target.nodeId,
@@ -165,6 +174,54 @@ export function parseReviewCommentRequest(
       side: mutation.target.side,
       uuid: mutation.target.uuid,
     },
+  };
+}
+
+function submissionId(value: unknown): string {
+  const id = requiredString(value, 'Submission ID', 128);
+  if (!/^[A-Za-z0-9_-]+$/.test(id)) {
+    throw new ReviewRequestError('Submission ID has an invalid format.');
+  }
+  return id;
+}
+
+export function parseGlobalReviewFindingRequest(
+  value: unknown,
+): GlobalReviewFindingRequest {
+  const body = record(value);
+  const source = record(body.source);
+  if (!isReviewSide(source.side)) {
+    throw new ReviewRequestError('Review side must be question or answer.');
+  }
+  return {
+    finding: requiredString(body.finding, 'Finding', 10_000),
+    reviewer: validateReviewer(body.reviewer),
+    source: {
+      collectionId: requiredString(source.collectionId, 'Collection'),
+      nodeId: requiredString(source.nodeId, 'Node ID'),
+      relativePath: requiredString(source.relativePath, 'Paper path', 2048),
+      side: source.side,
+      sourceVersion: requiredString(
+        source.sourceVersion,
+        'Source version',
+        256,
+      ),
+    },
+    submissionId: submissionId(body.submissionId),
+  };
+}
+
+export function parseProcessGlobalReviewFindingRequest(
+  value: unknown,
+): ProcessGlobalReviewFindingRequest {
+  const body = record(value);
+  const id = requiredString(body.id, 'Finding ID', 64);
+  if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)) {
+    throw new ReviewRequestError('Finding ID has an invalid format.');
+  }
+  return {
+    id,
+    processedBy: validateReviewer(body.processedBy),
   };
 }
 
@@ -210,7 +267,7 @@ export function assertReviewCommentTargetCurrent(
 }
 
 async function readRequestedPaper(
-  requested: ReviewCommentTargetDescriptor,
+  requested: Readonly<{ collectionId: string; relativePath: string }>,
 ): Promise<ReviewPaper> {
   if (!isPaperCollectionId(requested.collectionId)) {
     throw new ReviewRequestError(
@@ -331,4 +388,40 @@ export async function resolveVerifiedReviewCommentTarget(
   const current = await resolveCurrentCommentTarget(requested);
   assertReviewCommentTargetCurrent(requested, current);
   return current;
+}
+
+export async function resolveVerifiedGlobalReviewFindingSource(
+  requested: GlobalReviewFindingSourceDescriptor,
+) {
+  const paper = await readRequestedPaper(requested);
+  return resolveGlobalReviewFindingSourceInPaper(paper, requested);
+}
+
+export function resolveGlobalReviewFindingSourceInPaper(
+  paper: ReviewPaper,
+  requested: GlobalReviewFindingSourceDescriptor,
+) {
+  if (paper.source.version !== requested.sourceVersion) {
+    throw new ReviewRequestError(
+      'The paper changed after this page loaded. Refresh it before submitting the finding.',
+      409,
+    );
+  }
+  const resolved = findNodeAndTopLevel(paper, requested.nodeId);
+  if (!resolved) {
+    throw new ReviewRequestError(
+      'The selected question node was not found.',
+      404,
+    );
+  }
+  return {
+    sourceCollectionId: paper.source.collection.id,
+    sourceNodeId: resolved.node.id,
+    sourceNodeLabel: resolved.node.label,
+    sourceNodeUuid: resolved.node.uuid ?? null,
+    sourcePaperTitle: paper.title,
+    sourceRelativePath: paper.source.relativePath,
+    sourceSide: requested.side,
+    sourceVersion: paper.source.version,
+  } as const;
 }

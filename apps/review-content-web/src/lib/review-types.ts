@@ -94,6 +94,14 @@ export type ReviewCommentTargetDescriptor = Omit<
   'sheet'
 >;
 
+export type GlobalReviewFindingSourceDescriptor = Readonly<{
+  collectionId: string;
+  nodeId: string;
+  relativePath: string;
+  side: ReviewSide;
+  sourceVersion: string;
+}>;
+
 export type ReviewCommentLoad = Readonly<{
   comments: readonly LocalReviewComment[];
   error?: string;

@@ -1,5 +1,29 @@
 export type ReviewSide = "answer" | "question";
 
+export const GLOBAL_REVIEW_FINDING_STATUSES = ["todo", "processed"] as const;
+
+export type GlobalReviewFindingStatus =
+  (typeof GLOBAL_REVIEW_FINDING_STATUSES)[number];
+
+export type GlobalReviewFinding = Readonly<{
+  createdAt: string;
+  finding: string;
+  id: string;
+  processedAt: string | null;
+  processedBy: string | null;
+  reviewer: string;
+  sourceCollectionId: string;
+  sourceNodeId: string;
+  sourceNodeLabel: string;
+  sourceNodeUuid: string | null;
+  sourcePaperTitle: string;
+  sourceRelativePath: string;
+  sourceSide: ReviewSide;
+  sourceVersion: string;
+  status: GlobalReviewFindingStatus;
+  submissionId: string;
+}>;
+
 export const REVIEW_OUTCOMES = [
   "PRNS",
   "PRG",

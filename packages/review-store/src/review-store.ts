@@ -8,6 +8,10 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 
 import { ReviewDatabaseError } from "./errors.ts";
 import {
+  createGlobalReviewFindingRepository,
+  type GlobalReviewFindingRepository,
+} from "./global-review-findings.ts";
+import {
   createReviewCommentRepository,
   type ReviewCommentRepository,
 } from "./review-comments.ts";
@@ -24,6 +28,7 @@ export type ReviewStoreDatabase = ReturnType<typeof drizzle<typeof schema>>;
 export type ReviewStore = Readonly<{
   close: () => void;
   comments: ReviewCommentRepository;
+  findings: GlobalReviewFindingRepository;
   outcomes: ReviewOutcomeRepository;
 }>;
 
@@ -73,6 +78,7 @@ export function openReviewStore(
     return {
       close: () => connection.close(),
       comments: createReviewCommentRepository(db, now),
+      findings: createGlobalReviewFindingRepository(db, now),
       outcomes: createReviewOutcomeRepository(db, now, connection),
     };
   } catch (error) {
@@ -121,6 +127,11 @@ declare global {
 }
 
 export function getReviewStore(): ReviewStore {
+  const existing = globalThis.__rtqReviewStore;
+  if (existing && !Object.hasOwn(existing, "findings")) {
+    existing.close();
+    globalThis.__rtqReviewStore = undefined;
+  }
   globalThis.__rtqReviewStore ??= openReviewStore();
   return globalThis.__rtqReviewStore;
 }

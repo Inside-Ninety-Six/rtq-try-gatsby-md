@@ -39,6 +39,7 @@ for (const expected of [
   'Simple review',
   'Looks good',
   'Make a change',
+  'Global finding',
   'Reset',
   'S1 Q1',
   'S1 Q5a',
@@ -61,6 +62,20 @@ assert.ok(
   workingPosition > tipPosition,
   'workings should follow formulas and tips',
 );
+
+const activeFindings = await read('/api/review/findings');
+assert.ok(Array.isArray(JSON.parse(activeFindings.text).findings));
+assert.equal(activeFindings.response.headers.get('cache-control'), 'no-store');
+
+const malformedFindingProcessing = await fetch(
+  `${baseUrl}/api/review/findings`,
+  {
+    body: JSON.stringify({ id: 'not-a-uuid', processedBy: 'up' }),
+    headers: { 'Content-Type': 'application/json' },
+    method: 'PATCH',
+  },
+);
+assert.equal(malformedFindingProcessing.status, 400);
 
 const sourceVersion = await read(
   '/api/papers/source-version?collection=toml&path=dulwich-college--11-plus--maths--undated--specimen-paper-f.toml',

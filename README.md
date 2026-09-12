@@ -25,8 +25,9 @@ maths-colour macro catalogue.
   Next.js reviewer and the primary review application. It reads paper TOML
   from the active `rtq-content` checkout without generated Markdown, submits
   outcomes to the configured shared-database or retained Google Sheets
-  destination, and keeps append-only comments in the versioned
-  `database/review-content.sqlite` database in this repository.
+  destination, and keeps append-only comments plus a separate product-wide
+  findings inbox in the versioned `database/review-content.sqlite` database in
+  this repository.
 - [`apps/review-markdown-web`](apps/review-markdown-web) is the maintained
   Next.js application for reviewing generated paper Markdown and submitting
   review actions.

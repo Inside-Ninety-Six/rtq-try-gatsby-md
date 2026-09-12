@@ -1,10 +1,16 @@
 export {
   ReviewCommentConflictError,
   ReviewDatabaseError,
+  ReviewFindingConflictError,
   ReviewOutcomeRequestError,
   ReviewStoreDataError,
   ReviewStoreValidationError,
 } from "./errors.ts";
+export type {
+  AppendGlobalReviewFinding,
+  GlobalReviewFindingRepository,
+  ProcessGlobalReviewFinding,
+} from "./global-review-findings.ts";
 export type {
   AppendReviewComment,
   ReviewCommentRepository,
@@ -30,6 +36,8 @@ export {
 } from "./review-store.ts";
 export type { OpenReviewStoreOptions, ReviewStore } from "./review-store.ts";
 export type {
+  GlobalReviewFinding,
+  GlobalReviewFindingStatus,
   LocalReviewComment,
   ReviewOutcome,
   ReviewOutcomeTarget,
@@ -39,6 +47,7 @@ export type {
   StoredReviewOutcome,
 } from "./types.ts";
 export {
+  GLOBAL_REVIEW_FINDING_STATUSES,
   isReviewOutcome,
   LEGACY_REVIEW_OUTCOME_CONSOLIDATIONS,
   REMOVED_REVIEW_OUTCOMES,

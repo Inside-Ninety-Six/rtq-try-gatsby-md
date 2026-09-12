@@ -20,6 +20,7 @@ import {
   openReviewStore,
   ReviewCommentConflictError,
   ReviewDatabaseError,
+  ReviewFindingConflictError,
   ReviewStoreValidationError,
 } from "./index.ts";
 import {
@@ -180,6 +181,7 @@ test("upgrades the existing comment schema without rewriting stored comments", (
     "Preserve this existing row.",
   );
   assert.deepEqual(upgraded.outcomes.listAll(), []);
+  assert.deepEqual(upgraded.findings.listTodo(), []);
   upgraded.close();
   rmSync(directory, { force: true, recursive: true });
 });
@@ -199,6 +201,92 @@ test("comments reject a reused submission ID with different content", () => {
   assert.throws(
     () => store.comments.append({ ...input, comment: "Different comment" }),
     ReviewCommentConflictError,
+  );
+  store.close();
+});
+
+test("global findings leave the todo feed when they are processed", () => {
+  const times = [
+    new Date("2026-09-12T08:00:00.000Z"),
+    new Date("2026-09-12T08:01:00.000Z"),
+    new Date("2026-09-12T08:02:00.000Z"),
+    new Date("2026-09-12T08:03:00.000Z"),
+  ];
+  let time = 0;
+  const store = openReviewStore({
+    databasePath: ":memory:",
+    now: () => times[Math.min(time++, times.length - 1)],
+  });
+  const firstInput = {
+    finding: "Audit this naming convention across all review content.",
+    reviewer: "up",
+    sourceCollectionId: "working",
+    sourceNodeId: "paper:question-2",
+    sourceNodeLabel: "Question 2",
+    sourceNodeUuid: "7d2c24f5-a14b-4d45-9fe4-8baa406256bc",
+    sourcePaperTitle: "Practice paper",
+    sourceRelativePath: "maths/practice.toml",
+    sourceSide: "answer" as const,
+    sourceVersion: "sha256:first",
+    submissionId: "finding-submission-1",
+  };
+  const first = store.findings.append(firstInput);
+  const retry = store.findings.append(firstInput);
+  const second = store.findings.append({
+    ...firstInput,
+    finding: "Standardise the worked-example labels.",
+    sourceNodeId: "paper:question-3",
+    sourceNodeLabel: "Question 3",
+    submissionId: "finding-submission-2",
+  });
+
+  assert.equal(first.created, true);
+  assert.equal(retry.created, false);
+  assert.equal(retry.finding.id, first.finding.id);
+  assert.equal(first.finding.status, "todo");
+  assert.equal(first.finding.processedAt, null);
+  assert.equal(first.finding.processedBy, null);
+  assert.deepEqual(
+    store.findings.listTodo().map((finding) => finding.finding),
+    [
+      "Audit this naming convention across all review content.",
+      "Standardise the worked-example labels.",
+    ],
+  );
+
+  const processed = store.findings.markProcessed({
+    id: first.finding.id,
+    processedBy: "roadmap-owner",
+  });
+  assert.equal(processed?.changed, true);
+  assert.equal(processed?.finding.status, "processed");
+  assert.equal(processed?.finding.processedBy, "roadmap-owner");
+  assert.equal(processed?.finding.processedAt, "2026-09-12T08:03:00.000Z");
+  assert.deepEqual(
+    store.findings.listTodo().map((finding) => finding.id),
+    [second.finding.id],
+  );
+  assert.equal(
+    store.findings.markProcessed({
+      id: first.finding.id,
+      processedBy: "another-owner",
+    })?.changed,
+    false,
+  );
+  assert.equal(
+    store.findings.markProcessed({
+      id: "not-present",
+      processedBy: "roadmap-owner",
+    }),
+    undefined,
+  );
+  assert.throws(
+    () =>
+      store.findings.append({
+        ...firstInput,
+        finding: "Different content for the same submission.",
+      }),
+    ReviewFindingConflictError,
   );
   store.close();
 });

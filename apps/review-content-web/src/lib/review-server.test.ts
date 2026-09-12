@@ -6,8 +6,11 @@ import { reviewCommentIdentitiesForPaper } from './review-comments.ts';
 import {
   assertReviewCommentTargetCurrent,
   assertReviewTargetCurrent,
+  parseGlobalReviewFindingRequest,
+  parseProcessGlobalReviewFindingRequest,
   parseReviewCommentRequest,
   parseReviewOutcomeRequest,
+  resolveGlobalReviewFindingSourceInPaper,
   resolveReviewCommentTargetInPaper,
   ReviewRequestError,
 } from './review-server.ts';
@@ -340,6 +343,57 @@ test('recursively resolves a nested comment target within its top-level RAG cont
   );
 });
 
+test('captures canonical context for a global finding without requiring review metadata', () => {
+  const nested = {
+    children: [],
+    id: 's0.q0.sq0',
+    label: 'Question 2(a)',
+    review: { answer: {}, question: {} },
+  } as unknown as ReviewPaperNode;
+  const topLevel = {
+    children: [nested],
+    id: 's0.q0',
+    label: 'Question 2',
+    review: { answer: {}, question: {} },
+  } as unknown as ReviewPaperNode;
+  const paper = {
+    sections: [{ questions: [topLevel] }],
+    source: {
+      collection: { id: 'toml' },
+      relativePath: 'paper.toml',
+      version: 'source-version-1',
+    },
+    title: 'Practice paper',
+  } as unknown as ReviewPaper;
+  const source = {
+    collectionId: 'toml',
+    nodeId: nested.id,
+    relativePath: 'paper.toml',
+    side: 'answer' as const,
+    sourceVersion: 'source-version-1',
+  };
+
+  assert.deepEqual(resolveGlobalReviewFindingSourceInPaper(paper, source), {
+    sourceCollectionId: 'toml',
+    sourceNodeId: nested.id,
+    sourceNodeLabel: nested.label,
+    sourceNodeUuid: null,
+    sourcePaperTitle: 'Practice paper',
+    sourceRelativePath: 'paper.toml',
+    sourceSide: 'answer',
+    sourceVersion: 'source-version-1',
+  });
+  assert.throws(
+    () =>
+      resolveGlobalReviewFindingSourceInPaper(paper, {
+        ...source,
+        sourceVersion: 'stale-version',
+      }),
+    (error: unknown) =>
+      error instanceof ReviewRequestError && error.status === 409,
+  );
+});
+
 test('prevents duplicate active submissions and releases the scope afterward', async () => {
   const active = new Set<string>();
   const snapshots: string[][] = [];
@@ -483,6 +537,68 @@ test('accepts every API outcome and rejects malformed mutation input', () => {
         reviewer: 'up',
         submissionId: 'submission-1',
         target,
+      }),
+    ReviewRequestError,
+  );
+});
+
+test('parses the minimal global finding and processing requests', () => {
+  const source = {
+    collectionId: 'toml',
+    nodeId: 's0.q0',
+    relativePath: 'paper.toml',
+    side: 'answer',
+    sourceVersion: 'source-version-1',
+  };
+  assert.deepEqual(
+    parseGlobalReviewFindingRequest({
+      finding: '  Apply this naming rule everywhere.  ',
+      reviewer: 'up',
+      source,
+      submissionId: 'finding_submission-1',
+    }),
+    {
+      finding: 'Apply this naming rule everywhere.',
+      reviewer: 'up',
+      source,
+      submissionId: 'finding_submission-1',
+    },
+  );
+  assert.deepEqual(
+    parseProcessGlobalReviewFindingRequest({
+      id: 'd8ae66c1-9ab8-4c7f-a023-1c17b53237cf',
+      processedBy: 'roadmap-owner',
+    }),
+    {
+      id: 'd8ae66c1-9ab8-4c7f-a023-1c17b53237cf',
+      processedBy: 'roadmap-owner',
+    },
+  );
+  for (const invalid of [
+    { finding: ' ', reviewer: 'up', source, submissionId: 'valid' },
+    {
+      finding: 'Valid',
+      reviewer: 'up',
+      source: { ...source, side: 'both' },
+      submissionId: 'valid',
+    },
+    {
+      finding: 'Valid',
+      reviewer: 'up',
+      source,
+      submissionId: 'not valid',
+    },
+  ]) {
+    assert.throws(
+      () => parseGlobalReviewFindingRequest(invalid),
+      ReviewRequestError,
+    );
+  }
+  assert.throws(
+    () =>
+      parseProcessGlobalReviewFindingRequest({
+        id: 'not-a-uuid',
+        processedBy: 'roadmap-owner',
       }),
     ReviewRequestError,
   );

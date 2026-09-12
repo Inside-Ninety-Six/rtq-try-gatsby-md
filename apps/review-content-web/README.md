@@ -4,13 +4,13 @@ Internal Next.js application for reviewing RTQ paper content directly from the
 active `rtq-content` checkout. Unlike Review Markdown Web, this application does
 not consume generated Markdown. Paper content is always read-only; review
 outcomes use one configured database or Google Sheets destination while comments
-remain machine-local.
+and product-wide findings use the shared review database.
 
 The application currently provides collection and file browsing, full nested
 paper presentation, five-axis runtime tag filters, independent question and
 answer content-RAG filters, rendered and raw content views, allowlisted
-canonical paper assets, Google Sheets outcome submission, and local append-only
-review comments. A filter-aware left rail links directly to every visible
+canonical paper assets, Google Sheets outcome submission, local append-only
+review comments, and a separate product-wide finding inbox. A filter-aware left rail links directly to every visible
 question, subquestion, and sub-subquestion. The read-only `allTopicsToml`
 collection exposes the complete one-way projection across every active tag.
 
@@ -115,6 +115,12 @@ the browser and does not read TOML or contact Google Sheets.
 - Use **Show previous feedback** to reveal immutable feedback from RAG states
   other than the current state; it is off by default. Each feedback region
   reports current and previous counts even when history is hidden.
+- Use **Global finding** when an observation requires work across the review
+  content product rather than feedback on the selected question. The composer
+  requires only the finding; product scope is fixed and the current paper,
+  question node, side, source version, reviewer, and submission identity are
+  captured automatically. Submission closes the composer and does not add a
+  marker, count, or finding list to the paper.
 - Use the Previous/Next controls or `J`/`K` (`Alt` + arrow keys also work) to
   move through matching top-level question trees. The left question rail is
   built from that same filtered result and links to every displayed hierarchy
@@ -150,6 +156,15 @@ history does not move the composer farther down. All comments are read-only
 after creation, with no edit, delete, or reset route. The main SQLite database
 is versioned with this repository so feedback can be read from other machines;
 its journal, WAL, and SHM sidecars remain ignored.
+
+Global findings use a separate `global_review_findings` model and are never
+loaded with paper comments. New rows start as `todo`. A roadmap or Jira
+integration can read the active inbox with `GET /api/review/findings`, then mark
+one consumed with `PATCH /api/review/findings` and the JSON body
+`{"id":"<finding UUID>","processedBy":"<identity>"}`. Processing records
+`processedAt` and `processedBy`, changes the status to `processed`, and removes
+the row from subsequent active-inbox responses. There is intentionally no Jira
+URL field or paper-context finding history.
 
 ## Checks and production build
 
@@ -189,3 +204,8 @@ outcome to the production Google Sheet.
 6. Change the current state, confirm the earlier feedback is hidden, then turn
    on **Show previous feedback** and confirm the prior-state feedback appears
    in its original context.
+7. Open **Global finding** from a selected question, confirm the product scope
+   and source context are prefilled, submit one finding, and confirm no finding
+   indicator appears on the paper. Read it through `GET /api/review/findings`,
+   process it through `PATCH /api/review/findings`, and confirm it no longer
+   appears in the active response.

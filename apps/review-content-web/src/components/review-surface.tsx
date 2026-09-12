@@ -183,6 +183,12 @@ type KeyboardCommentDialogState = Readonly<{
   topLevelLabel: string;
 }>;
 
+type GlobalFindingDialogState = Readonly<{
+  nodeId: string;
+  nodeLabel: string;
+  side: ReviewSide;
+}>;
+
 function flattenReviewCursors(
   node: DisplayPaperNode,
   topLevelQuestion: DisplayPaperNode = node,
@@ -1469,6 +1475,10 @@ export function ReviewSurface({
     useState<KeyboardCommentDialogState>();
   const [commentDraft, setCommentDraft] = useState('');
   const keyboardCommentSubmissionId = useRef<string | undefined>(undefined);
+  const [globalFindingDialog, setGlobalFindingDialog] =
+    useState<GlobalFindingDialogState>();
+  const [globalFindingDraft, setGlobalFindingDraft] = useState('');
+  const globalFindingSubmissionId = useRef<string | undefined>(undefined);
   const toolbarRef = useRef<HTMLElement>(null);
   const pendingRequestKeys = useRef(new Set<string>());
   const sourceFreshnessPending = useRef(false);
@@ -1562,6 +1572,7 @@ export function ReviewSurface({
   const keyboardCommentPending = commentDialog
     ? pendingKeys.has(`${reviewTargetKey(commentDialog.target)}:comment`)
     : false;
+  const globalFindingPending = pendingKeys.has('global-finding:create');
   const matchingNodeIds = useMemo(
     () => new Set(result.matchingNodeIds),
     [result.matchingNodeIds],
@@ -2063,8 +2074,89 @@ export function ReviewSurface({
     }
   }
 
+  function openGlobalFinding() {
+    if (!currentCursor) {
+      setKeyboardStatus({
+        kind: 'error',
+        message: 'There is no current question to provide context.',
+      });
+      return;
+    }
+    globalFindingSubmissionId.current = undefined;
+    setGlobalFindingDraft('');
+    setKeyboardStatus({ kind: 'idle', message: '' });
+    setGlobalFindingDialog({
+      nodeId: currentCursor.node.id,
+      nodeLabel: currentCursor.node.label,
+      side: keyboardSide,
+    });
+  }
+
+  function closeGlobalFinding() {
+    if (globalFindingPending) return;
+    globalFindingSubmissionId.current = undefined;
+    setGlobalFindingDialog(undefined);
+    setGlobalFindingDraft('');
+  }
+
+  async function submitGlobalFinding(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!globalFindingDialog || globalFindingPending) return;
+    const finding = globalFindingDraft.trim();
+    if (!finding) {
+      setKeyboardStatus({
+        kind: 'error',
+        message: 'Enter a finding before submitting it.',
+      });
+      return;
+    }
+    globalFindingSubmissionId.current ??= crypto.randomUUID();
+    setKeyboardStatus({ kind: 'idle', message: '' });
+    try {
+      await withPending('global-finding:create', async () => {
+        const response = await fetch('/api/review/findings', {
+          body: JSON.stringify({
+            finding,
+            reviewer,
+            source: {
+              collectionId: paper.source.collection.id,
+              nodeId: globalFindingDialog.nodeId,
+              relativePath: paper.source.relativePath,
+              side: globalFindingDialog.side,
+              sourceVersion: paper.source.version,
+            },
+            submissionId: globalFindingSubmissionId.current,
+          }),
+          headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+        });
+        await responseMessage(response);
+      });
+      globalFindingSubmissionId.current = undefined;
+      setGlobalFindingDialog(undefined);
+      setGlobalFindingDraft('');
+      setKeyboardStatus({
+        kind: 'success',
+        message: 'Global finding submitted.',
+      });
+    } catch (error) {
+      setKeyboardStatus({
+        kind: 'error',
+        message:
+          error instanceof Error ? error.message : 'Finding submission failed.',
+      });
+    }
+  }
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (globalFindingDialog) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          closeGlobalFinding();
+        }
+        return;
+      }
       if (commentDialog) {
         if (event.key === 'Escape') {
           event.preventDefault();
@@ -2386,6 +2478,14 @@ export function ReviewSurface({
             >
               Comment <kbd>c</kbd>
             </button>
+            <button
+              disabled={!currentCursor || globalFindingPending}
+              onClick={openGlobalFinding}
+              title="Create a finding for the review content product"
+              type="button"
+            >
+              Global finding
+            </button>
           </div>
         </div>
         <span className="keyboard-note">j / k · next / previous</span>
@@ -2550,6 +2650,98 @@ export function ReviewSurface({
                 </button>
                 <button disabled={keyboardCommentPending} type="submit">
                   {keyboardCommentPending ? 'Adding…' : 'Add comment'}
+                </button>
+              </div>
+            </form>
+            {keyboardStatus.kind === 'error' && keyboardStatus.message ? (
+              <p className="review-action-status review-action-status--error">
+                {keyboardStatus.message}
+              </p>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
+      {globalFindingDialog ? (
+        <div
+          className="keyboard-comment-backdrop"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) closeGlobalFinding();
+          }}
+          role="presentation"
+        >
+          <section
+            aria-labelledby="global-finding-title"
+            aria-modal="true"
+            className="keyboard-comment-dialog global-finding-dialog"
+            role="dialog"
+          >
+            <header>
+              <div>
+                <span>Product-wide feedback</span>
+                <h2 id="global-finding-title">New global finding</h2>
+              </div>
+              <button
+                aria-label="Close global finding dialog"
+                disabled={globalFindingPending}
+                onClick={closeGlobalFinding}
+                type="button"
+              >
+                ×
+              </button>
+            </header>
+            <dl>
+              <div>
+                <dt>Scope</dt>
+                <dd>All review content / product</dd>
+              </div>
+              <div>
+                <dt>Context</dt>
+                <dd>
+                  {globalFindingDialog.nodeLabel} ·{' '}
+                  {globalFindingDialog.side === 'answer'
+                    ? 'Answer'
+                    : 'Question'}
+                </dd>
+              </div>
+            </dl>
+            <form onSubmit={(event) => void submitGlobalFinding(event)}>
+              <label htmlFor="global-finding-draft">
+                Finding from {reviewer}
+              </label>
+              <textarea
+                autoFocus
+                id="global-finding-draft"
+                maxLength={10_000}
+                onChange={(event) => setGlobalFindingDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeGlobalFinding();
+                  } else if (
+                    event.key === 'Enter' &&
+                    (event.ctrlKey || event.metaKey)
+                  ) {
+                    event.preventDefault();
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }}
+                placeholder="Describe the change needed across the product…"
+                rows={6}
+                value={globalFindingDraft}
+              />
+              <div className="keyboard-comment-actions">
+                <span>
+                  <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> to submit
+                </span>
+                <button
+                  disabled={globalFindingPending}
+                  onClick={closeGlobalFinding}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button disabled={globalFindingPending} type="submit">
+                  {globalFindingPending ? 'Submitting…' : 'Submit finding'}
                 </button>
               </div>
             </form>
