@@ -2,6 +2,7 @@ export {
   clearAllDimensionalFilters,
   clearAllReviewFilters,
   clearDimensionalFilter,
+  clearReviewOutcomeFilters,
   emptyDimensionalFilterSelection,
   emptyReviewFilterSelection,
   filterReviewPaper,

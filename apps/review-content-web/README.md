@@ -94,6 +94,11 @@ the browser and does not read TOML or contact Google Sheets.
 - Combine tags within any of the five dimensions and filter question and answer
   content-RAG states independently. The shared URL preserves the complete
   filter scope across refreshes, along with the active matching question.
+- Peer-review outcome filters allow every outcome to be selected even when its
+  current count is zero. Multiple outcomes on one side use OR, so reviewers can
+  select both the current and intended next outcome before changing a request.
+  **Reset** in that band clears all question and answer outcome selections while
+  preserving content-RAG and dimensional filters.
 - Use **Clear all** to reset both state facets, all five tag dimensions, and the
   active question while retaining unrelated display parameters.
 - Use the simple display switches to show or hide workings and answers,

@@ -46,6 +46,7 @@ test('exports a read-only public surface', () => {
   for (const expectedExport of [
     'DIMENSIONAL_TAG_AXES',
     'REVIEWABLE_COLLECTION_IDS',
+    'clearReviewOutcomeFilters',
     'getContentWorkspaceStatus',
     'filterReviewPaper',
     'inspectPaperSource',

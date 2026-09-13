@@ -75,6 +75,10 @@ test('review outcome filters are independent, URL-backed, and failure-safe', asy
   assert.match(component, /reviewOutcomeError=\{outcomeLoad\.error\}/);
   assert.match(component, /selection\.questionReview\.length/);
   assert.match(component, /selection\.answerReview\.length/);
+  assert.match(component, /Selections within each side use OR\./);
+  assert.match(component, /aria-label="Reset review outcome filters"/);
+  assert.match(component, /clearReviewOutcomeFilters\(selection\)/);
+  assert.match(component, /onClearReviewOutcomes=\{clearReviewOutcomes\}/);
   assert.match(
     component,
     /filterReviewPaper\(paper, selection, reviewOutcomeFilterContext\)/,

@@ -15,6 +15,7 @@ import {
 import {
   DIMENSIONAL_TAG_AXES,
   clearAllReviewFilters,
+  clearReviewOutcomeFilters,
   filterReviewPaper,
   parseReviewFilterSearchParams,
   serializeReviewFilterSearchParams,
@@ -1065,6 +1066,7 @@ function PreferenceToggle({
 function FilterPanel({
   facets,
   onClear,
+  onClearReviewOutcomes,
   onToggle,
   onToggleState,
   onReturnToQuestion,
@@ -1076,6 +1078,7 @@ function FilterPanel({
 }: {
   facets: ReturnType<typeof filterReviewPaper>['facets'];
   onClear: () => void;
+  onClearReviewOutcomes: () => void;
   onToggle: (axis: DimensionalTagAxis, value: string) => void;
   onToggleState: (
     parameter: 'answerRag' | 'answerReview' | 'questionRag' | 'questionReview',
@@ -1099,6 +1102,8 @@ function FilterPanel({
     selection.answerRag.length +
     selection.questionReview.length +
     selection.answerReview.length;
+  const selectedReviewOutcomeCount =
+    selection.questionReview.length + selection.answerReview.length;
   return (
     <section
       className="filter-panel"
@@ -1128,9 +1133,19 @@ function FilterPanel({
       </div>
       <div className="state-filter-band review-outcome-filter-band">
         <div className="state-filter-intro">
-          <strong>Peer-review outcome</strong>
+          <div className="state-filter-intro-heading">
+            <strong>Peer-review outcome</strong>
+            <button
+              aria-label="Reset review outcome filters"
+              disabled={selectedReviewOutcomeCount === 0}
+              onClick={onClearReviewOutcomes}
+              type="button"
+            >
+              Reset
+            </button>
+          </div>
           <span>
-            Current requests for the exact question and answer RAG states.
+            Select any number of outcomes. Selections within each side use OR.
           </span>
         </div>
         {reviewOutcomeError ? (
@@ -1924,6 +1939,19 @@ export function ReviewSurface({
     );
   }
 
+  function clearReviewOutcomes() {
+    const current = new URLSearchParams(searchParams.toString());
+    current.delete('question');
+    replaceSearchParams(
+      new URLSearchParams(
+        serializeReviewFilterSearchParams(
+          clearReviewOutcomeFilters(selection),
+          current,
+        ),
+      ),
+    );
+  }
+
   function navigateTo(id: string) {
     setCurrentNodeId(id);
     const next = new URLSearchParams(searchParams.toString());
@@ -2282,6 +2310,7 @@ export function ReviewSurface({
       <FilterPanel
         facets={result.facets}
         onClear={clearFilters}
+        onClearReviewOutcomes={clearReviewOutcomes}
         onToggle={toggleFilter}
         onToggleState={toggleStateFilter}
         onReturnToQuestion={

@@ -208,6 +208,16 @@ export function clearAllReviewFilters(): ReviewFilterSelection {
   return emptyReviewFilterSelection();
 }
 
+export function clearReviewOutcomeFilters(
+  selection: ReviewFilterSelection,
+): ReviewFilterSelection {
+  return normalizeReviewFilterSelection({
+    ...selection,
+    answerReview: [],
+    questionReview: [],
+  });
+}
+
 function flattenNode(node: ReviewPaperNode): ReviewPaperNode[] {
   return [node, ...node.children.flatMap(flattenNode)];
 }
@@ -481,7 +491,7 @@ export function filterReviewPaper(
             const selected = selection[parameter].includes(value);
             return {
               count,
-              disabled: count === 0 && !selected,
+              disabled: false,
               selected,
               value,
             };

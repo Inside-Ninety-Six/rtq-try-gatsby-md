@@ -5,6 +5,7 @@ import {
   clearAllDimensionalFilters,
   clearAllReviewFilters,
   clearDimensionalFilter,
+  clearReviewOutcomeFilters,
   filterReviewPaper,
   REVIEW_OUTCOME_FILTER_VALUES,
   parseDimensionalFilterSearchParams,
@@ -501,6 +502,12 @@ test('cross-filters review outcomes with content state and dimensions', () => {
     )?.count,
     0,
   );
+  assert.ok(
+    result.reviewOutcomeFacets.every((facet) =>
+      facet.options.every((option) => !option.disabled),
+    ),
+    'review outcomes must remain selectable when their cross-filtered count is zero',
+  );
   assert.equal(
     result.reviewOutcomeFacets[1].options.find(
       (option) => option.value === 'PRCR',
@@ -580,6 +587,11 @@ test('round-trips state and dimensional filters and clears the complete lens', (
     'answer-rag=rag_wf_g2&answer-rag=rag_wf_g3&answer-review=PRCC&math=math.number.fraction&question=q-3&question-rag=rag_wf_ng4&question-review=PRCR&view=raw',
   );
   assert.deepEqual(parseReviewFilterSearchParams(serialized), parsed);
+  assert.deepEqual(clearReviewOutcomeFilters(parsed), {
+    ...parsed,
+    answerReview: [],
+    questionReview: [],
+  });
   assert.deepEqual(clearAllReviewFilters(), {
     answerRag: [],
     answerReview: [],
